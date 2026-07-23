@@ -15,6 +15,7 @@ export function ThemeToggle({ theme, onToggle }: ThemeToggleProps) {
       onClick={onToggle}
       aria-label={`Switch to ${nextTheme} mode`}
       title={`Switch to ${nextTheme} mode`}
+      data-journey-control
       data-testid="theme-toggle"
     >
       <svg
