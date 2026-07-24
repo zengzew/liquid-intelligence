@@ -22,12 +22,10 @@ function createRiverCurve() {
       new Vector3(3.55, 0.08, -14.5),
       new Vector3(0.72, 0, -23.8),
       new Vector3(0.3, -0.1, -35),
-      new Vector3(2.4, -0.22, -48),
-      new Vector3(-2.8, -0.36, -62.5),
-      new Vector3(2.6, -0.52, -80),
-      new Vector3(-0.8, -0.72, -112),
-      new Vector3(-4, -0.96, -142),
-      new Vector3(5.5, -1.18, -178),
+      new Vector3(1.85, -0.22, -48),
+      new Vector3(-0.56, -0.36, -62.5),
+      new Vector3(0.72, -0.52, -80),
+      new Vector3(0.08, -0.72, -112),
     ],
     false,
     "catmullrom",
@@ -45,7 +43,7 @@ export default function ExperienceScene({
     <>
       <Environment theme={theme} progressRef={progressRef} />
       <River curve={curve} theme={theme} progressRef={progressRef} />
-      <CameraRig curve={curve} progressRef={progressRef} />
+      <CameraRig progressRef={progressRef} />
     </>
   );
 }

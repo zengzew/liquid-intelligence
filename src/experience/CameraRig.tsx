@@ -1,136 +1,157 @@
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import type { MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
-import {
-  CatmullRomCurve3,
-  MathUtils,
-  Matrix4,
-  PerspectiveCamera,
-  Quaternion,
-  Vector3,
-} from "three";
+import { MathUtils, PerspectiveCamera, Vector3 } from "three";
 import type { JourneyProgress } from "./LiquidExperience";
 
 interface CameraRigProps {
-  curve: CatmullRomCurve3;
   progressRef: MutableRefObject<JourneyProgress>;
 }
 
-const WORLD_UP = new Vector3(0, 1, 0);
-const LOCAL_FORWARD = new Vector3(0, 0, 1);
+interface CameraShot {
+  at: number;
+  position: Vector3;
+  target: Vector3;
+  fov: number;
+  roll: number;
+}
 
-export default function CameraRig({
-  curve,
-  progressRef,
-}: CameraRigProps) {
-  const initialized = useRef(false);
-  const curveCenter = useRef(new Vector3());
-  const forwardPoint = useRef(new Vector3());
-  const curveTangent = useRef(new Vector3());
-  const curveLateral = useRef(new Vector3());
-  const desiredPosition = useRef(new Vector3());
-  const desiredTarget = useRef(new Vector3());
-  const desiredQuaternion = useRef(new Quaternion());
-  const rollQuaternion = useRef(new Quaternion());
-  const lookAtMatrix = useRef(new Matrix4());
+const DESKTOP_SHOTS: CameraShot[] = [
+  {
+    at: 0,
+    position: new Vector3(-0.55, 11.9, -2.6),
+    target: new Vector3(2.05, 0.04, 4.35),
+    fov: 40,
+    roll: -0.004,
+  },
+  {
+    at: 0.25,
+    position: new Vector3(0.4, 13.2, -48),
+    target: new Vector3(1.7, -0.05, -20),
+    fov: 45,
+    roll: 0.002,
+  },
+  {
+    at: 0.5,
+    position: new Vector3(-0.2, 14.2, -72),
+    target: new Vector3(0.8, -0.28, -42),
+    fov: 46,
+    roll: -0.002,
+  },
+  {
+    at: 0.75,
+    position: new Vector3(0.25, 18, -104),
+    target: new Vector3(0.4, -0.5, -72),
+    fov: 48,
+    roll: 0.001,
+  },
+  {
+    at: 1,
+    position: new Vector3(0.15, 24, -132),
+    target: new Vector3(0.1, -0.72, -96),
+    fov: 50,
+    roll: 0,
+  },
+];
 
-  useFrame(({ camera, size }, delta) => {
-    const progress = progressRef.current.current;
-    const progressVelocity = progressRef.current.velocity;
-    const isMobile = size.width < 700;
-    const easedProgress = MathUtils.smoothstep(progress, 0, 1);
-    const velocityLead = MathUtils.clamp(
-      progressVelocity * 0.006,
-      -0.02,
-      0.026,
-    );
-    const focusProgress = MathUtils.clamp(
-      0.015 + progress * 0.84 + velocityLead,
-      0.012,
-      0.9,
-    );
-    const lookAhead =
-      MathUtils.lerp(0.057, 0.035, easedProgress) +
-      Math.min(0.006, Math.abs(progressVelocity) * 0.0015);
+const MOBILE_SHOTS: CameraShot[] = [
+  {
+    at: 0,
+    position: new Vector3(0.65, 14.1, -2.1),
+    target: new Vector3(2.28, 0.04, 2.1),
+    fov: 51,
+    roll: -0.002,
+  },
+  {
+    at: 0.25,
+    position: new Vector3(1.2, 17, -48),
+    target: new Vector3(2, -0.06, -20),
+    fov: 53,
+    roll: 0.002,
+  },
+  {
+    at: 0.5,
+    position: new Vector3(0.4, 18, -72),
+    target: new Vector3(0.8, -0.28, -41),
+    fov: 54,
+    roll: -0.001,
+  },
+  {
+    at: 0.75,
+    position: new Vector3(0.3, 22, -104),
+    target: new Vector3(0.4, -0.5, -71),
+    fov: 55,
+    roll: 0.001,
+  },
+  {
+    at: 1,
+    position: new Vector3(0.2, 30, -132),
+    target: new Vector3(0.1, -0.72, -95),
+    fov: 56,
+    roll: 0,
+  },
+];
 
-    curve.getPointAt(focusProgress, curveCenter.current);
-    curve.getPointAt(
-      Math.min(0.995, focusProgress + lookAhead),
-      forwardPoint.current,
-    );
-    curve.getTangentAt(focusProgress, curveTangent.current).normalize();
-    curveLateral.current
-      .crossVectors(WORLD_UP, curveTangent.current)
-      .normalize();
+function smootherStep(value: number) {
+  const clamped = MathUtils.clamp(value, 0, 1);
+  return clamped * clamped * clamped * (clamped * (clamped * 6 - 15) + 10);
+}
 
-    const cameraHeight = isMobile
-      ? MathUtils.lerp(10.2, 27.5, easedProgress)
-      : MathUtils.lerp(7.6, 28.5, easedProgress);
-    const backwardOffset = isMobile
-      ? MathUtils.lerp(4.8, 2.7, easedProgress)
-      : MathUtils.lerp(5.8, 3.1, easedProgress);
-    const baseLateralOffset = isMobile ? 0.08 : -2.2;
-    const velocityLateralLag = MathUtils.clamp(
-      -progressVelocity * (isMobile ? 0.045 : 0.08),
-      -0.22,
-      0.22,
-    );
-
-    desiredPosition.current
-      .copy(curveCenter.current)
-      .addScaledVector(curveTangent.current, -backwardOffset)
-      .addScaledVector(
-        curveLateral.current,
-        baseLateralOffset + velocityLateralLag,
-      )
-      .addScaledVector(WORLD_UP, cameraHeight);
-    desiredTarget.current.copy(forwardPoint.current);
-
-    lookAtMatrix.current.lookAt(
-      desiredPosition.current,
-      desiredTarget.current,
-      WORLD_UP,
-    );
-    desiredQuaternion.current.setFromRotationMatrix(lookAtMatrix.current);
-    rollQuaternion.current.setFromAxisAngle(
-      LOCAL_FORWARD,
-      MathUtils.clamp(
-        -progressVelocity * (isMobile ? 0.0035 : 0.0055),
-        -0.018,
-        0.018,
-      ),
-    );
-    desiredQuaternion.current.multiply(rollQuaternion.current);
-
-    const desiredFov = isMobile
-      ? MathUtils.lerp(46, 55, easedProgress)
-      : MathUtils.lerp(40, 48, easedProgress);
-
-    if (!initialized.current) {
-      camera.position.copy(desiredPosition.current);
-      camera.quaternion.copy(desiredQuaternion.current);
-
-      if (camera instanceof PerspectiveCamera) {
-        camera.fov = desiredFov;
-        camera.updateProjectionMatrix();
-      }
-
-      initialized.current = true;
-      return;
+function findShotPair(shots: CameraShot[], progress: number) {
+  for (let index = 0; index < shots.length - 1; index += 1) {
+    if (progress <= shots[index + 1].at) {
+      return [shots[index], shots[index + 1]] as const;
     }
+  }
 
-    const safeDelta = Math.min(0.05, Math.max(1 / 240, delta));
-    const positionResponse = 1 - Math.exp(-safeDelta * 10);
-    const rotationResponse = 1 - Math.exp(-safeDelta * 8);
-    const fovResponse = 1 - Math.exp(-safeDelta * 7.5);
+  return [shots[shots.length - 2], shots[shots.length - 1]] as const;
+}
 
-    camera.position.lerp(desiredPosition.current, positionResponse);
-    camera.quaternion.slerp(desiredQuaternion.current, rotationResponse);
+export default function CameraRig({ progressRef }: CameraRigProps) {
+  const cameraPosition = useRef(new Vector3());
+  const cameraTarget = useRef(new Vector3());
+  const pointerOffset = useRef(new Vector3());
+  const shotsByViewport = useMemo(
+    () => ({ desktop: DESKTOP_SHOTS, mobile: MOBILE_SHOTS }),
+    [],
+  );
+
+  useFrame(({ camera, pointer, size }) => {
+    const progress = progressRef.current.current;
+    const shots =
+      size.width < 700 ? shotsByViewport.mobile : shotsByViewport.desktop;
+    const [from, to] = findShotPair(shots, progress);
+    const localProgress = smootherStep(
+      (progress - from.at) / Math.max(0.0001, to.at - from.at),
+    );
+
+    cameraPosition.current.lerpVectors(
+      from.position,
+      to.position,
+      localProgress,
+    );
+    cameraTarget.current.lerpVectors(from.target, to.target, localProgress);
+
+    const pointerScale = size.width < 700 ? 0.035 : 0.075;
+    pointerOffset.current.set(
+      pointer.x * pointerScale,
+      pointer.y * pointerScale * 0.35,
+      0,
+    );
+
+    camera.position.copy(cameraPosition.current).add(pointerOffset.current);
+    cameraTarget.current.x += pointer.x * pointerScale * 0.45;
+    cameraTarget.current.y += pointer.y * pointerScale * 0.18;
+    camera.lookAt(cameraTarget.current);
+    camera.rotateZ(
+      MathUtils.lerp(from.roll, to.roll, localProgress) +
+        pointer.x * (size.width < 700 ? 0.0004 : 0.0008),
+    );
 
     if (camera instanceof PerspectiveCamera) {
-      const nextFov = MathUtils.lerp(camera.fov, desiredFov, fovResponse);
+      const nextFov = MathUtils.lerp(from.fov, to.fov, localProgress);
 
-      if (Math.abs(camera.fov - nextFov) > 0.0005) {
+      if (Math.abs(camera.fov - nextFov) > 0.001) {
         camera.fov = nextFov;
         camera.updateProjectionMatrix();
       }
