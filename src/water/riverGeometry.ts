@@ -2,37 +2,89 @@ import {
   BufferAttribute,
   BufferGeometry,
   CatmullRomCurve3,
-  Float32BufferAttribute,
   Vector3,
 } from "three";
 
 const UP = new Vector3(0, 1, 0);
 
-function smoothstep(min: number, max: number, value: number) {
-  const normalized = Math.min(1, Math.max(0, (value - min) / (max - min)));
-  return normalized * normalized * (3 - 2 * normalized);
+interface WidthKeyframe {
+  at: number;
+  halfWidth: number;
+}
+
+const WIDTH_PROFILE: WidthKeyframe[] = [
+  { at: 0, halfWidth: 0.035 },
+  { at: 0.2, halfWidth: 0.26 },
+  { at: 0.45, halfWidth: 1.35 },
+  { at: 0.7, halfWidth: 4.2 },
+  { at: 1, halfWidth: 18 },
+];
+
+function smootherStep(value: number) {
+  const clamped = Math.min(1, Math.max(0, value));
+  return clamped * clamped * clamped * (clamped * (clamped * 6 - 15) + 10);
+}
+
+export function getRevealFrontier(progress: number) {
+  const clamped = Math.min(1, Math.max(0, progress));
+  return 0.018 + Math.pow(clamped, 0.92) * 0.982;
 }
 
 export function getRiverHalfWidth(progress: number) {
-  const growth = Math.pow(smoothstep(0, 1, progress), 1.5);
-  return 0.22 + growth * 3.1;
+  const clamped = Math.min(1, Math.max(0, progress));
+
+  for (let index = 0; index < WIDTH_PROFILE.length - 1; index += 1) {
+    const from = WIDTH_PROFILE[index];
+    const to = WIDTH_PROFILE[index + 1];
+
+    if (clamped <= to.at) {
+      const local = smootherStep(
+        (clamped - from.at) / Math.max(0.0001, to.at - from.at),
+      );
+      return from.halfWidth + (to.halfWidth - from.halfWidth) * local;
+    }
+  }
+
+  return WIDTH_PROFILE[WIDTH_PROFILE.length - 1].halfWidth;
 }
 
-function pseudoRandom(index: number, salt: number) {
-  const value = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453;
-  return value - Math.floor(value);
+function getRiverFrame(
+  curve: CatmullRomCurve3,
+  progress: number,
+  center: Vector3,
+  tangent: Vector3,
+  lateral: Vector3,
+) {
+  curve.getPointAt(progress, center);
+  curve.getTangentAt(progress, tangent).normalize();
+  lateral.crossVectors(UP, tangent).normalize();
+}
+
+function getBankOffset(progress: number, across: number) {
+  const width = getRiverHalfWidth(progress);
+  const bankVariation =
+    1 +
+    Math.sin(progress * 29.7 + across * 1.9) * 0.045 +
+    Math.sin(progress * 67.3 - across * 3.1) * 0.018;
+  const asymmetry =
+    1 +
+    Math.sin(progress * 15.8 + across * 2.4) *
+      0.065 *
+      smootherStep((progress - 0.08) / 0.82);
+
+  return across * width * bankVariation * asymmetry;
 }
 
 export function createRiverGeometry(
   curve: CatmullRomCurve3,
   longitudinalSegments = 360,
-  crossSegments = 28,
+  crossSegments = 36,
 ) {
   const geometry = new BufferGeometry();
   const positions: number[] = [];
   const uvs: number[] = [];
-  const centers: number[] = [];
   const longitudinal: number[] = [];
+  const acrossValues: number[] = [];
   const indices: number[] = [];
 
   const center = new Vector3();
@@ -41,41 +93,26 @@ export function createRiverGeometry(
   const vertex = new Vector3();
 
   for (let row = 0; row <= longitudinalSegments; row += 1) {
-    const t = row / longitudinalSegments;
-
-    curve.getPointAt(t, center);
-    curve.getTangentAt(t, tangent).normalize();
-    lateral.crossVectors(UP, tangent).normalize();
-
-    const growth = Math.pow(smoothstep(0, 1, t), 1.5);
-    const halfWidth = getRiverHalfWidth(t);
-    const bankVariation =
-      1 +
-      Math.sin(t * 31.7) * 0.035 +
-      Math.sin(t * 73.4 + 1.8) * 0.018;
+    const progress = row / longitudinalSegments;
+    getRiverFrame(curve, progress, center, tangent, lateral);
+    const downstream = smootherStep(progress);
 
     for (let column = 0; column <= crossSegments; column += 1) {
-      const u = column / crossSegments;
-      const across = u * 2 - 1;
-      const asymmetry =
-        1 +
-        Math.sin(t * 19.5 + across * 2.6) *
-          0.045 *
-          smoothstep(0.1, 0.9, t);
-      const offset = across * halfWidth * bankVariation * asymmetry;
-      const settledHeight =
-        -Math.pow(Math.abs(across), 1.8) * (0.018 + growth * 0.028) +
-        Math.sin(t * 52 + across * 3.2) * 0.006 * growth;
+      const across = (column / crossSegments) * 2 - 1;
+      const offset = getBankOffset(progress, across);
+      const surfaceContour =
+        -Math.pow(Math.abs(across), 2.1) * (0.004 + downstream * 0.035) +
+        Math.sin(progress * 26 + across * 2.5) * 0.0035 * downstream;
 
       vertex
         .copy(center)
         .addScaledVector(lateral, offset)
-        .addScaledVector(UP, settledHeight);
+        .addScaledVector(UP, surfaceContour);
 
       positions.push(vertex.x, vertex.y, vertex.z);
-      centers.push(center.x, center.y, center.z);
-      longitudinal.push(t);
-      uvs.push(u, t);
+      longitudinal.push(progress);
+      acrossValues.push(across);
+      uvs.push(column / crossSegments, progress);
     }
   }
 
@@ -97,12 +134,12 @@ export function createRiverGeometry(
   );
   geometry.setAttribute("uv", new BufferAttribute(new Float32Array(uvs), 2));
   geometry.setAttribute(
-    "aCenter",
-    new BufferAttribute(new Float32Array(centers), 3),
-  );
-  geometry.setAttribute(
     "aLongitudinal",
     new BufferAttribute(new Float32Array(longitudinal), 1),
+  );
+  geometry.setAttribute(
+    "aAcross",
+    new BufferAttribute(new Float32Array(acrossValues), 1),
   );
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
@@ -111,52 +148,70 @@ export function createRiverGeometry(
   return geometry;
 }
 
-export function createGlintGeometry(
+export function createRiverSkirtGeometry(
   curve: CatmullRomCurve3,
-  count = 96,
+  longitudinalSegments = 360,
 ) {
   const geometry = new BufferGeometry();
   const positions: number[] = [];
-  const progressValues: number[] = [];
-  const seedValues: number[] = [];
-  const sizeValues: number[] = [];
+  const uvs: number[] = [];
+  const longitudinal: number[] = [];
+  const indices: number[] = [];
+
   const center = new Vector3();
   const tangent = new Vector3();
   const lateral = new Vector3();
-  const point = new Vector3();
+  const top = new Vector3();
+  const bottom = new Vector3();
 
-  for (let index = 0; index < count; index += 1) {
-    const distribution = (index + pseudoRandom(index, 1.7) * 0.7) / count;
-    const progress = 0.018 + distribution * 0.93;
-    const sideSeed = pseudoRandom(index, 3.1);
-    const sideDirection = sideSeed > 0.5 ? 1 : -1;
-    const sideMagnitude = Math.pow(pseudoRandom(index, 4.9), 0.62) * 0.88;
+  for (let sideIndex = 0; sideIndex < 2; sideIndex += 1) {
+    const side = sideIndex === 0 ? -1 : 1;
+    const sideStart = sideIndex * (longitudinalSegments + 1) * 2;
 
-    curve.getPointAt(progress, center);
-    curve.getTangentAt(progress, tangent).normalize();
-    lateral.crossVectors(UP, tangent).normalize();
+    for (let row = 0; row <= longitudinalSegments; row += 1) {
+      const progress = row / longitudinalSegments;
+      getRiverFrame(curve, progress, center, tangent, lateral);
+      const offset = getBankOffset(progress, side);
+      const depth =
+        0.045 +
+        smootherStep((progress - 0.08) / 0.92) *
+          Math.min(0.7, getRiverHalfWidth(progress) * 0.095);
 
-    point
-      .copy(center)
-      .addScaledVector(
-        lateral,
-        sideDirection * sideMagnitude * getRiverHalfWidth(progress),
-      );
-    point.y += 0.035 + pseudoRandom(index, 7.3) * 0.055;
+      top.copy(center).addScaledVector(lateral, offset);
+      top.y -= 0.004 + smootherStep(progress) * 0.035;
+      bottom.copy(top);
+      bottom.y -= depth;
 
-    positions.push(point.x, point.y, point.z);
-    progressValues.push(progress);
-    seedValues.push(pseudoRandom(index, 8.8));
-    sizeValues.push(0.45 + pseudoRandom(index, 10.2) * 0.55);
+      positions.push(top.x, top.y, top.z, bottom.x, bottom.y, bottom.z);
+      uvs.push(0, progress, 1, progress);
+      longitudinal.push(progress, progress);
+    }
+
+    for (let row = 0; row < longitudinalSegments; row += 1) {
+      const current = sideStart + row * 2;
+      const next = current + 2;
+
+      if (side < 0) {
+        indices.push(current, current + 1, next);
+        indices.push(next, current + 1, next + 1);
+      } else {
+        indices.push(current, next, current + 1);
+        indices.push(next, next + 1, current + 1);
+      }
+    }
   }
 
-  geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
   geometry.setAttribute(
-    "aPathProgress",
-    new Float32BufferAttribute(progressValues, 1),
+    "position",
+    new BufferAttribute(new Float32Array(positions), 3),
   );
-  geometry.setAttribute("aSeed", new Float32BufferAttribute(seedValues, 1));
-  geometry.setAttribute("aSize", new Float32BufferAttribute(sizeValues, 1));
+  geometry.setAttribute("uv", new BufferAttribute(new Float32Array(uvs), 2));
+  geometry.setAttribute(
+    "aLongitudinal",
+    new BufferAttribute(new Float32Array(longitudinal), 1),
+  );
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
 
   return geometry;

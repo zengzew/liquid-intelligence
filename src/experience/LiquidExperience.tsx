@@ -7,9 +7,12 @@ import {
 } from "three";
 import type { ExperienceTheme } from "../App";
 import ExperienceScene from "./ExperienceScene";
+import FrameMonitor from "./FrameMonitor";
 
 export interface JourneyProgress {
-  value: number;
+  target: number;
+  current: number;
+  velocity: number;
 }
 
 interface LiquidExperienceProps {
@@ -29,8 +32,8 @@ export default function LiquidExperience({
 }: LiquidExperienceProps) {
   return (
     <Canvas
-      camera={{ fov: 44, near: 0.08, far: 95, position: [0, 2.6, 10] }}
-      dpr={[1, 1.75]}
+      camera={{ fov: 42, near: 0.08, far: 140, position: [0, 11, -2] }}
+      dpr={[1, 1.5]}
       flat={false}
       gl={{
         alpha: false,
@@ -39,9 +42,14 @@ export default function LiquidExperience({
         powerPreference: "high-performance",
         stencil: false,
       }}
-      onCreated={({ gl }) => configureRenderer(gl)}
+      performance={{ min: 0.65 }}
+      onCreated={({ gl }) => {
+        configureRenderer(gl);
+        Reflect.set(window, "__LIQUID_RENDERER__", gl);
+      }}
     >
       <ExperienceScene theme={theme} progressRef={progressRef} />
+      <FrameMonitor />
     </Canvas>
   );
 }

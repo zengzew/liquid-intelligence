@@ -1,11 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import LiquidExperience from "./experience/LiquidExperience";
+import type { JourneyProgress } from "./experience/LiquidExperience";
 
 export type ExperienceTheme = "night" | "morning";
-
-gsap.registerPlugin(ScrollTrigger);
 
 function getInitialTheme(): ExperienceTheme {
   if (typeof window === "undefined") {
@@ -25,13 +22,42 @@ function getInitialTheme(): ExperienceTheme {
 
 export default function App() {
   const runwayRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef({ value: 0 });
+  const progressRef = useRef<JourneyProgress>({
+    target: 0,
+    current: 0,
+    velocity: 0,
+  });
   const [theme, setTheme] = useState<ExperienceTheme>(getInitialTheme);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem("liquid-intelligence-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    let runtimeErrorCount = 0;
+
+    const recordRuntimeError = (event: ErrorEvent | PromiseRejectionEvent) => {
+      runtimeErrorCount += 1;
+      document.documentElement.dataset.runtimeErrors = String(
+        runtimeErrorCount,
+      );
+      document.documentElement.dataset.lastRuntimeError =
+        event instanceof ErrorEvent
+          ? event.message
+          : String(event.reason ?? "Unhandled promise rejection");
+    };
+
+    document.documentElement.dataset.runtimeErrors = "0";
+    delete document.documentElement.dataset.lastRuntimeError;
+    window.addEventListener("error", recordRuntimeError);
+    window.addEventListener("unhandledrejection", recordRuntimeError);
+
+    return () => {
+      window.removeEventListener("error", recordRuntimeError);
+      window.removeEventListener("unhandledrejection", recordRuntimeError);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const runway = runwayRef.current;
@@ -40,26 +66,60 @@ export default function App() {
       return;
     }
 
-    const context = gsap.context(() => {
-      gsap.set(progressRef.current, { value: 0 });
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    let frameId = 0;
+    let previousTime = performance.now();
 
-      gsap.to(progressRef.current, {
-        value: 1,
-        ease: "none",
-        scrollTrigger: {
-          trigger: runway,
-          start: "top top",
-          end: "bottom bottom",
-          scrub: 0.65,
-          invalidateOnRefresh: true,
-          onUpdate: ({ progress }) => {
-            runway.style.setProperty("--journey-progress", progress.toString());
-          },
-        },
-      });
-    }, runway);
+    const updateTarget = () => {
+      const scrollRange = Math.max(
+        1,
+        document.documentElement.scrollHeight - window.innerHeight,
+      );
+      progressRef.current.target = Math.min(
+        1,
+        Math.max(0, window.scrollY / scrollRange),
+      );
+    };
 
-    return () => context.revert();
+    const renderProgress = (time: number) => {
+      const delta = Math.min(0.05, Math.max(0.001, (time - previousTime) / 1000));
+      const previousProgress = progressRef.current.current;
+      const targetProgress = progressRef.current.target;
+      const response = reducedMotion ? 1 : 1 - Math.exp(-delta * 9.5);
+
+      progressRef.current.current +=
+        (targetProgress - progressRef.current.current) * response;
+
+      if (
+        Math.abs(targetProgress - progressRef.current.current) <
+        (reducedMotion ? 0.001 : 0.00005)
+      ) {
+        progressRef.current.current = targetProgress;
+      }
+
+      progressRef.current.velocity =
+        (progressRef.current.current - previousProgress) / delta;
+      previousTime = time;
+
+      const progress = progressRef.current.current;
+      runway.style.setProperty("--journey-progress", progress.toFixed(5));
+      runway.dataset.progress = progress.toFixed(3);
+
+      frameId = window.requestAnimationFrame(renderProgress);
+    };
+
+    updateTarget();
+    frameId = window.requestAnimationFrame(renderProgress);
+    window.addEventListener("scroll", updateTarget, { passive: true });
+    window.addEventListener("resize", updateTarget);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener("scroll", updateTarget);
+      window.removeEventListener("resize", updateTarget);
+    };
   }, []);
 
   const nextTheme: ExperienceTheme =
@@ -73,9 +133,8 @@ export default function App() {
 
       <div ref={runwayRef} className="scroll-runway">
         <header className="interface-header">
-          <div className="wordmark" aria-label="Liquid Intelligence">
-            <span>LIQUID</span>
-            <span>INTELLIGENCE</span>
+          <div className="wordmark" aria-label="Zane">
+            ZANE
           </div>
 
           <button
@@ -92,6 +151,14 @@ export default function App() {
             </span>
           </button>
         </header>
+
+        <section className="hero-identity" aria-labelledby="hero-title">
+          <h1 id="hero-title">ZANE</h1>
+          <p className="hero-identity__role">Software Engineer</p>
+          <p className="hero-identity__statement">
+            Building with AI, code and creativity.
+          </p>
+        </section>
 
         <aside className="journey-index" aria-hidden="true">
           <span>00</span>

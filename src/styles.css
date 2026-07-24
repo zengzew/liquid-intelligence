@@ -6,20 +6,20 @@
   font-synthesis: none;
   text-rendering: geometricPrecision;
   --background: #050607;
-  --foreground: #eef1f3;
-  --muted: rgba(238, 241, 243, 0.48);
-  --hairline: rgba(238, 241, 243, 0.22);
-  --veil: rgba(5, 6, 7, 0.3);
+  --foreground: #ececea;
+  --muted: rgba(236, 236, 234, 0.5);
+  --hairline: rgba(236, 236, 234, 0.2);
+  --veil: rgba(2, 3, 3, 0.24);
   background: var(--background);
 }
 
 :root[data-theme="morning"] {
   color-scheme: light;
-  --background: #f5f3ee;
-  --foreground: #202327;
-  --muted: rgba(32, 35, 39, 0.48);
-  --hairline: rgba(32, 35, 39, 0.22);
-  --veil: rgba(245, 243, 238, 0.24);
+  --background: #f3f0e9;
+  --foreground: #282a2b;
+  --muted: rgba(40, 42, 43, 0.52);
+  --hairline: rgba(40, 42, 43, 0.2);
+  --veil: rgba(243, 240, 233, 0.18);
 }
 
 * {
@@ -79,17 +79,23 @@ button {
 .canvas-shell::before {
   background:
     radial-gradient(
-      circle at 52% 47%,
-      transparent 22%,
-      color-mix(in srgb, var(--background) 22%, transparent) 63%,
-      color-mix(in srgb, var(--background) 70%, transparent) 100%
+      circle at 62% 48%,
+      transparent 18%,
+      color-mix(in srgb, var(--background) 12%, transparent) 62%,
+      color-mix(in srgb, var(--background) 52%, transparent) 100%
     ),
-    linear-gradient(90deg, var(--veil), transparent 34%, transparent 72%, var(--veil));
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--veil) 82%, transparent),
+      transparent 38%,
+      transparent 78%,
+      var(--veil)
+    );
   mix-blend-mode: normal;
 }
 
 .canvas-shell::after {
-  opacity: 0.2;
+  opacity: 0.14;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.32'/%3E%3C/svg%3E");
   background-size: 180px 180px;
   mix-blend-mode: soft-light;
@@ -106,12 +112,13 @@ button {
   --journey-progress: 0;
   position: relative;
   z-index: 2;
-  height: 560svh;
-  min-height: 2800px;
+  height: 540svh;
+  min-height: 2700px;
   pointer-events: none;
 }
 
 .interface-header,
+.hero-identity,
 .journey-index,
 .scroll-cue {
   position: fixed;
@@ -132,18 +139,52 @@ button {
 }
 
 .wordmark {
-  display: grid;
-  gap: 2px;
-  font-size: 9px;
-  font-weight: 500;
-  line-height: 1.2;
-  letter-spacing: 0.38em;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.58em;
   text-transform: uppercase;
 }
 
-.wordmark span:last-child {
+.hero-identity {
+  top: 31vh;
+  left: clamp(118px, 12.7vw, 196px);
+  width: min(34vw, 470px);
+  transform: translateY(calc(var(--journey-progress) * -34px));
+  opacity: clamp(0, calc(1 - var(--journey-progress) * 2.55), 1);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.hero-identity h1 {
+  margin: 0 -0.48em 22px 0;
+  color: var(--foreground);
+  font-size: clamp(38px, 4.15vw, 64px);
+  font-weight: 300;
+  line-height: 0.95;
+  letter-spacing: 0.48em;
+}
+
+.hero-identity p {
+  margin: 0;
+}
+
+.hero-identity__role {
+  color: var(--foreground);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+}
+
+.hero-identity__statement {
+  margin-top: 16px !important;
   color: var(--muted);
-  transition: color 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+  font-size: clamp(11px, 0.9vw, 13px);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.015em;
 }
 
 .theme-toggle {
@@ -219,6 +260,7 @@ button {
   font-size: 7px;
   font-weight: 500;
   letter-spacing: 0.18em;
+  opacity: clamp(0.42, calc(0.62 + var(--journey-progress) * 0.38), 1);
 }
 
 .journey-index__track {
@@ -303,8 +345,8 @@ button {
 
 @media (max-width: 700px) {
   .scroll-runway {
-    height: 480svh;
-    min-height: 2300px;
+    height: 500svh;
+    min-height: 2400px;
   }
 
   .interface-header {
@@ -322,6 +364,29 @@ button {
 
   .journey-index {
     left: 20px;
+    opacity: 0.56;
+  }
+
+  .hero-identity {
+    top: 17vh;
+    left: 20px;
+    width: calc(100vw - 40px);
+  }
+
+  .hero-identity h1 {
+    margin-bottom: 18px;
+    font-size: clamp(30px, 10.5vw, 42px);
+    letter-spacing: 0.42em;
+  }
+
+  .hero-identity__role {
+    font-size: 8px;
+  }
+
+  .hero-identity__statement {
+    margin-top: 13px !important;
+    max-width: 250px;
+    font-size: 10px;
   }
 
   .scroll-cue {
