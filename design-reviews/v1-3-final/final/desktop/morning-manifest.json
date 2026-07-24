@@ -1,0 +1,32 @@
+[
+  {
+    "file": "morning-1440x900-p100.png",
+    "target": 1,
+    "actual": 1,
+    "theme": "morning"
+  },
+  {
+    "file": "morning-1440x900-p75.png",
+    "target": 0.75,
+    "actual": 0.75,
+    "theme": "morning"
+  },
+  {
+    "file": "morning-1440x900-p50.png",
+    "target": 0.5,
+    "actual": 0.5,
+    "theme": "morning"
+  },
+  {
+    "file": "morning-1440x900-p25.png",
+    "target": 0.25,
+    "actual": 0.25,
+    "theme": "morning"
+  },
+  {
+    "file": "morning-1440x900-p00.png",
+    "target": 0,
+    "actual": 0,
+    "theme": "morning"
+  }
+]

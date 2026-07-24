@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { MutableRefObject } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
@@ -18,6 +19,7 @@ export interface JourneyProgress {
 interface LiquidExperienceProps {
   theme: ExperienceTheme;
   progressRef: MutableRefObject<JourneyProgress>;
+  profilingEnabled: boolean;
 }
 
 function configureRenderer(renderer: WebGLRenderer) {
@@ -29,15 +31,35 @@ function configureRenderer(renderer: WebGLRenderer) {
 export default function LiquidExperience({
   theme,
   progressRef,
+  profilingEnabled,
 }: LiquidExperienceProps) {
+  const [renderDpr, setRenderDpr] = useState(() =>
+    window.innerWidth <= 640 ? 0.82 : 0.6,
+  );
+
+  useEffect(() => {
+    const updateRenderDpr = () => {
+      const nextDpr = window.innerWidth <= 640 ? 0.82 : 0.6;
+      setRenderDpr((currentDpr) =>
+        currentDpr === nextDpr ? currentDpr : nextDpr,
+      );
+    };
+
+    window.addEventListener("resize", updateRenderDpr);
+
+    return () => {
+      window.removeEventListener("resize", updateRenderDpr);
+    };
+  }, []);
+
   return (
     <Canvas
-      camera={{ fov: 42, near: 0.08, far: 140, position: [0, 11, -2] }}
-      dpr={[1, 1.5]}
+      camera={{ fov: 42, near: 0.08, far: 260, position: [0, 11, -2] }}
+      dpr={renderDpr}
       flat={false}
       gl={{
         alpha: false,
-        antialias: true,
+        antialias: false,
         depth: true,
         powerPreference: "high-performance",
         stencil: false,
@@ -49,7 +71,7 @@ export default function LiquidExperience({
       }}
     >
       <ExperienceScene theme={theme} progressRef={progressRef} />
-      <FrameMonitor />
+      <FrameMonitor enabled={profilingEnabled} />
     </Canvas>
   );
 }
