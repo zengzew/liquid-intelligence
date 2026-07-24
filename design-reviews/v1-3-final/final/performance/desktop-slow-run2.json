@@ -1,0 +1,101 @@
+{
+  "canvas": [
+    {
+      "cssHeight": 900,
+      "cssWidth": 1440,
+      "height": 648,
+      "width": 1036
+    }
+  ],
+  "capturedAt": "2026-07-24T10:02:48.092Z",
+  "interaction": {
+    "eventDurations": {
+      "count": 0,
+      "max": 0,
+      "p50": 0,
+      "p95": 0,
+      "p99": 0
+    },
+    "longAnimationBlocking": {
+      "count": 0,
+      "max": 0,
+      "p50": 0,
+      "p95": 0,
+      "p99": 0
+    },
+    "longAnimationFrames": {
+      "count": 0,
+      "max": 0,
+      "p50": 0,
+      "p95": 0,
+      "p99": 0
+    },
+    "longTasks": {
+      "count": 0,
+      "max": 0,
+      "p50": 0,
+      "p95": 0,
+      "p99": 0
+    },
+    "pointerInputToFrame": {
+      "count": 0,
+      "max": 0,
+      "p50": 0,
+      "p95": 0,
+      "p99": 0
+    },
+    "scrollInputToFrame": {
+      "count": 0,
+      "max": 0,
+      "p50": 0,
+      "p95": 0,
+      "p99": 0
+    },
+    "themeInputToFrame": {
+      "count": 0,
+      "max": 0,
+      "p50": 0,
+      "p95": 0,
+      "p99": 0
+    }
+  },
+  "lastRuntimeError": null,
+  "programs": [
+    {
+      "fragmentLog": "",
+      "index": 0,
+      "programLog": "",
+      "runnable": true,
+      "vertexLog": ""
+    }
+  ],
+  "render": {
+    "drawCalls": 1,
+    "fps": 121,
+    "frameTime": {
+      "count": 360,
+      "max": 11.5,
+      "p50": 8.2,
+      "p95": 10.3,
+      "p99": 11.2
+    },
+    "framesOver18ms": 0,
+    "framesOver33ms": 0,
+    "framesOver50ms": 0,
+    "geometries": 1,
+    "textures": 2,
+    "triangles": 8452
+  },
+  "runtimeErrors": 0,
+  "scenario": "slow-complete",
+  "scroll": {
+    "max": 3960,
+    "top": 3960
+  },
+  "theme": "night",
+  "viewport": {
+    "dpr": 1,
+    "height": 900,
+    "width": 1440
+  }
+}

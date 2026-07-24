@@ -3,92 +3,171 @@ const surfaceVertexShader = /* glsl */ `
 
   uniform float uTime;
   uniform float uMotionScale;
+  uniform float uProgress;
   uniform vec2 uPointer;
   uniform float uReveal;
+  uniform sampler2D uGuideTexture;
+  uniform sampler2D uNoiseTexture;
+  uniform float uGuideCount;
 
   attribute float aLongitudinal;
   attribute float aAcross;
+  attribute vec3 aLocalOffset;
+  attribute float aFeature;
 
-  varying vec2 vRiverUv;
   varying vec3 vWorldPosition;
+  varying vec3 vGuideNormal;
+  varying vec3 vGuideTangent;
+  varying vec3 vGuideLateral;
+  varying vec2 vFlowCoordinate;
   varying float vAcross;
   varying float vLongitudinal;
   varying float vWave;
+  varying float vSurfaceDensity;
+  varying float vFeature;
 
-  float hash21(vec2 value) {
-    value = fract(value * vec2(123.34, 456.21));
-    value += dot(value, value + 45.32);
-    return fract(value.x * value.y);
+  vec3 readGuidePosition(float guideIndex) {
+    float clampedIndex = clamp(guideIndex, 0.0, uGuideCount - 1.0);
+    float guideU = (clampedIndex + 0.5) / uGuideCount;
+    return texture2D(uGuideTexture, vec2(guideU, 0.25)).xyz;
   }
 
-  float noise21(vec2 value) {
-    vec2 index = floor(value);
-    vec2 fraction = fract(value);
-    fraction = fraction * fraction * (3.0 - 2.0 * fraction);
-
-    float a = hash21(index);
-    float b = hash21(index + vec2(1.0, 0.0));
-    float c = hash21(index + vec2(0.0, 1.0));
-    float d = hash21(index + vec2(1.0, 1.0));
-
-    return mix(mix(a, b, fraction.x), mix(c, d, fraction.x), fraction.y);
+  vec3 readGuideVelocity(float guideIndex) {
+    float clampedIndex = clamp(guideIndex, 0.0, uGuideCount - 1.0);
+    float guideU = (clampedIndex + 0.5) / uGuideCount;
+    return texture2D(uGuideTexture, vec2(guideU, 0.75)).xyz;
   }
 
-  float fbm(vec2 value) {
-    float result = 0.0;
-    float amplitude = 0.5;
-
-    for (int octave = 0; octave < 3; octave++) {
-      result += amplitude * noise21(value);
-      value = value * 2.03 + vec2(13.1, 9.7);
-      amplitude *= 0.5;
-    }
-
-    return result;
+  vec3 interpolateGuidePosition(float guidePosition) {
+    float lowerGuide = floor(guidePosition);
+    float guideMix = fract(guidePosition);
+    return mix(
+      readGuidePosition(lowerGuide),
+      readGuidePosition(lowerGuide + 1.0),
+      guideMix
+    );
   }
 
   void main() {
-    vec3 transformed = position;
-    float downstream = smoothstep(0.05, 0.92, aLongitudinal);
-    float flowingNoise = fbm(vec2(
-      aLongitudinal * 15.0 - uTime * 0.12,
-      aAcross * 2.2 + uTime * 0.018
-    ));
-    float longWave = sin(
-      aLongitudinal * 83.0 -
-      uTime * 0.72 +
-      aAcross * 3.1 +
-      flowingNoise * 2.2
+    float guidePosition =
+      clamp(aLongitudinal, 0.0, 1.0) * (uGuideCount - 1.0);
+    float lowerGuide = floor(guidePosition);
+    float guideMix = fract(guidePosition);
+    vec3 guideCenter = interpolateGuidePosition(guidePosition);
+    vec3 previousCenter = readGuidePosition(lowerGuide - 1.0);
+    vec3 nextCenter = readGuidePosition(lowerGuide + 2.0);
+    vec3 guideVelocity = mix(
+      readGuideVelocity(lowerGuide),
+      readGuideVelocity(lowerGuide + 1.0),
+      guideMix
     );
-    float crossWave = sin(
-      aLongitudinal * 31.0 -
-      uTime * 0.38 -
-      aAcross * 7.0
+    vec3 guideTangent = normalize(nextCenter - previousCenter);
+    vec3 guideLateral = normalize(cross(vec3(0.0, 1.0, 0.0), guideTangent));
+    vec3 guideNormal = normalize(cross(guideTangent, guideLateral));
+    vec3 transformed =
+      guideCenter +
+      guideTangent * aLocalOffset.x +
+      guideLateral * aLocalOffset.y +
+      guideNormal * aLocalOffset.z;
+
+    float downstream = smoothstep(0.025, 0.82, aLongitudinal);
+    float narrowStage = smoothstep(0.08, 0.42, uProgress);
+    float riverStage = smoothstep(0.38, 0.88, uProgress);
+    float broadNoise = texture2D(
+      uNoiseTexture,
+      vec2(
+        aLongitudinal * 1.76 - uTime * 0.0026,
+        aAcross * 0.18 + aLongitudinal * 0.37
+      )
+    ).b;
+    float foldNoise = texture2D(
+      uNoiseTexture,
+      vec2(
+        aLongitudinal * 3.82 - uTime * 0.0052,
+        aAcross * 0.43 - aLongitudinal * 0.61
+      )
+    ).a;
+    vec2 flowCoordinate = vec2(
+      aLocalOffset.y,
+      aLongitudinal * 188.0
+    );
+
+    float broadFold =
+      (broadNoise - 0.5) * mix(0.03, 0.075, riverStage) +
+      sin(
+        flowCoordinate.y * 0.17 +
+        flowCoordinate.x * 0.46 -
+        uTime * 0.16 +
+        foldNoise * 3.7
+      ) *
+        mix(0.007, 0.026, riverStage) *
+        mix(0.32, 1.0, smoothstep(0.28, 0.72, broadNoise));
+    float mediumRipple =
+      sin(
+        flowCoordinate.y * 0.53 -
+        flowCoordinate.x * 1.12 -
+        uTime * 0.31 +
+        broadNoise * 5.4
+      ) *
+      mix(0.002, 0.013, narrowStage) *
+      mix(0.24, 1.0, smoothstep(0.3, 0.7, foldNoise));
+    float diagonalRipple =
+      sin(
+        flowCoordinate.y * 0.37 +
+        flowCoordinate.x * 1.46 -
+        uTime * 0.24 +
+        foldNoise * 4.6
+      ) *
+      mix(0.0015, 0.009, riverStage) *
+      mix(0.28, 1.0, smoothstep(0.32, 0.74, broadNoise));
+    float edgeFold =
+      smoothstep(0.58, 1.0, abs(aAcross)) *
+      sin(
+        flowCoordinate.y * 0.29 -
+        aAcross * 8.0 -
+        uTime * 0.21
+      ) *
+      mix(0.004, 0.018, narrowStage);
+    float propagationLift = clamp(
+      dot(guideVelocity, guideNormal) * 0.018,
+      -0.006,
+      0.008
     );
     float surfaceWave =
-      (longWave * 0.016 + crossWave * 0.009) *
-      mix(0.18, 1.0, downstream) *
+      (
+        broadFold +
+        mediumRipple +
+        diagonalRipple +
+        edgeFold
+      ) *
+      mix(0.34, 1.0, downstream) *
       uMotionScale;
 
-    float pointerProgress = max(0.02, uReveal - 0.04);
+    float pointerProgress = max(0.05, uReveal - 0.045);
     float pointerDistance = distance(
       vec2(aAcross * 0.5 + 0.5, aLongitudinal),
-      vec2(0.5 + uPointer.x * 0.16, pointerProgress - uPointer.y * 0.018)
+      vec2(0.5 + uPointer.x * 0.14, pointerProgress - uPointer.y * 0.016)
     );
     float pointerRipple =
-      sin(pointerDistance * 46.0 - uTime * 1.65) *
-      exp(-pointerDistance * 22.0) *
-      0.011 *
+      sin(pointerDistance * 36.0 - uTime * 0.78) *
+      exp(-pointerDistance * 25.0) *
+      0.0025 *
       uMotionScale;
 
-    transformed.y += surfaceWave + pointerRipple;
+    transformed +=
+      guideNormal * (surfaceWave + pointerRipple + propagationLift);
 
     vec4 worldPosition = modelMatrix * vec4(transformed, 1.0);
-    vRiverUv = vec2(aAcross * 0.5 + 0.5, aLongitudinal);
     vWorldPosition = worldPosition.xyz;
+    vGuideNormal = normalize(mat3(modelMatrix) * guideNormal);
+    vGuideTangent = normalize(mat3(modelMatrix) * guideTangent);
+    vGuideLateral = normalize(mat3(modelMatrix) * guideLateral);
+    vFlowCoordinate = flowCoordinate;
     vAcross = aAcross;
     vLongitudinal = aLongitudinal;
-    vWave = surfaceWave + pointerRipple;
+    vWave = surfaceWave + pointerRipple + propagationLift;
+    vSurfaceDensity = mix(broadNoise, foldNoise, 0.42);
+    vFeature = aFeature;
 
     gl_Position = projectionMatrix * viewMatrix * worldPosition;
   }
