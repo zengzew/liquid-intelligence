@@ -7,7 +7,7 @@
   text-rendering: geometricPrecision;
   --background: #050607;
   --foreground: #ececea;
-  --muted: rgba(236, 236, 234, 0.5);
+  --muted: rgba(236, 236, 234, 0.58);
   --hairline: rgba(236, 236, 234, 0.2);
   --veil: rgba(2, 3, 3, 0.24);
   background: var(--background);
@@ -17,7 +17,7 @@
   color-scheme: light;
   --background: #f3f0e9;
   --foreground: #282a2b;
-  --muted: rgba(40, 42, 43, 0.52);
+  --muted: rgba(40, 42, 43, 0.64);
   --hairline: rgba(40, 42, 43, 0.2);
   --veil: rgba(243, 240, 233, 0.18);
 }
@@ -50,6 +50,17 @@ body {
 
 button {
   font: inherit;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
 .experience {
@@ -110,6 +121,11 @@ button {
 
 .scroll-runway {
   --journey-progress: 0;
+  --chapter-origin-presence: 1;
+  --chapter-stream-presence: 0;
+  --chapter-bookcast-presence: 0;
+  --chapter-confluence-presence: 0;
+  --chapter-ocean-presence: 0;
   position: relative;
   z-index: 2;
   height: 540svh;
@@ -118,7 +134,7 @@ button {
 }
 
 .interface-header,
-.hero-identity,
+.chapter,
 .journey-index,
 .scroll-cue {
   position: fixed;
@@ -146,45 +162,172 @@ button {
   text-transform: uppercase;
 }
 
-.hero-identity {
-  top: 31vh;
-  left: clamp(118px, 12.7vw, 196px);
-  width: min(34vw, 470px);
-  transform: translateY(calc(var(--journey-progress) * -34px));
-  opacity: clamp(0, calc(1 - var(--journey-progress) * 2.55), 1);
+.chapter {
+  --chapter-presence: 0;
+  width: min(31vw, 430px);
+  margin: 0;
+  opacity: var(--chapter-presence);
   pointer-events: none;
-  will-change: transform, opacity;
+  transform: translate3d(
+    0,
+    calc((1 - var(--chapter-presence)) * 24px),
+    0
+  );
+  will-change: opacity, transform;
 }
 
-.hero-identity h1 {
-  margin: 0 -0.48em 22px 0;
+.chapter h1,
+.chapter h2,
+.chapter p {
+  margin: 0;
+}
+
+.chapter h1,
+.chapter h2 {
   color: var(--foreground);
-  font-size: clamp(38px, 4.15vw, 64px);
   font-weight: 300;
+  text-transform: uppercase;
+  transition: color 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.chapter h1 {
+  margin-right: -0.48em;
+  font-size: clamp(38px, 4.15vw, 64px);
   line-height: 0.95;
   letter-spacing: 0.48em;
 }
 
-.hero-identity p {
-  margin: 0;
+.chapter h2 {
+  max-width: 390px;
+  font-size: clamp(22px, 2.05vw, 32px);
+  line-height: 1.34;
+  letter-spacing: 0.25em;
 }
 
-.hero-identity__role {
-  color: var(--foreground);
-  font-size: 9px;
+.chapter__label,
+.chapter__role,
+.chapter__meta,
+.chapter__location {
+  font-size: 8px;
   font-weight: 500;
-  line-height: 1.3;
-  letter-spacing: 0.34em;
+  line-height: 1.35;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
 }
 
-.hero-identity__statement {
-  margin-top: 16px !important;
+.chapter__label {
+  margin-bottom: 24px !important;
   color: var(--muted);
-  font-size: clamp(11px, 0.9vw, 13px);
+}
+
+.chapter__role {
+  margin-top: 24px !important;
+  color: var(--foreground);
+}
+
+.chapter__body {
+  max-width: 390px;
+  margin-top: 22px !important;
+  color: var(--muted);
+  font-size: clamp(12px, 0.88vw, 13px);
   font-weight: 400;
-  line-height: 1.5;
-  letter-spacing: 0.015em;
+  line-height: 1.72;
+  letter-spacing: 0.02em;
+}
+
+.chapter__meta {
+  margin-top: 28px !important;
+  color: color-mix(in srgb, var(--foreground) 66%, transparent);
+  line-height: 1.6;
+}
+
+.chapter__location {
+  margin-top: 40px !important;
+  color: var(--muted);
+}
+
+.chapter--origin {
+  --chapter-presence: var(--chapter-origin-presence);
+  top: 31vh;
+  left: clamp(118px, 12.7vw, 196px);
+}
+
+.chapter--stream {
+  --chapter-presence: var(--chapter-stream-presence);
+  top: 39vh;
+  right: clamp(86px, 8.2vw, 136px);
+}
+
+.chapter--bookcast {
+  --chapter-presence: var(--chapter-bookcast-presence);
+  top: 24vh;
+  left: clamp(108px, 7.6vw, 132px);
+  width: min(29vw, 410px);
+}
+
+.chapter--bookcast .chapter__body {
+  max-width: 380px;
+}
+
+.chapter--confluence {
+  --chapter-presence: var(--chapter-confluence-presence);
+  top: 47vh;
+  right: clamp(80px, 7.5vw, 128px);
+}
+
+.chapter--ocean {
+  --chapter-presence: var(--chapter-ocean-presence);
+  top: 17vh;
+  left: clamp(108px, 10vw, 164px);
+}
+
+.chapter__links {
+  display: flex;
+  align-items: center;
+  gap: 34px;
+  margin-top: 34px;
+}
+
+.chapter__links a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  color: var(--foreground);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-decoration: none;
+  text-transform: uppercase;
+  pointer-events: auto;
+}
+
+.chapter__links a::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  content: "";
+  transform: scaleX(0.24);
+  transform-origin: left;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.chapter__links a:hover::after,
+.chapter__links a:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.chapter__links a:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 7px;
+}
+
+.scroll-runway[data-chapter="ocean"] .chapter--ocean {
+  pointer-events: auto;
 }
 
 .theme-toggle {
@@ -253,21 +396,23 @@ button {
 .journey-index {
   top: 50%;
   left: clamp(24px, 4.3vw, 68px);
-  display: grid;
-  justify-items: center;
-  gap: 10px;
+  width: 116px;
+  height: clamp(176px, 28vh, 248px);
   transform: translateY(-50%);
   font-size: 7px;
   font-weight: 500;
   letter-spacing: 0.18em;
-  opacity: clamp(0.42, calc(0.62 + var(--journey-progress) * 0.38), 1);
+  pointer-events: auto;
 }
 
 .journey-index__track {
-  position: relative;
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 7px;
   display: block;
   width: 1px;
-  height: clamp(74px, 14vh, 132px);
+  overflow: hidden;
   background: var(--hairline);
   transition: background-color 1.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -280,24 +425,100 @@ button {
   transform-origin: top;
 }
 
-.journey-index__point {
+.journey-index__start,
+.journey-index__end {
+  display: none;
+}
+
+.journey-index ol {
   position: absolute;
-  left: 50%;
-  width: 5px;
-  height: 5px;
+  inset: 14px 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.journey-index li {
+  position: absolute;
+  top: calc(var(--chapter-position) * 100%);
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.journey-index button {
+  position: relative;
+  display: block;
+  width: 116px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.journey-index button:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 4px;
+}
+
+.journey-index__dot {
+  position: absolute;
+  top: 50%;
+  left: 7px;
+  width: 6px;
+  height: 6px;
   border: 1px solid currentColor;
   border-radius: 50%;
   background: var(--background);
   transform: translate(-50%, -50%);
-  transition: background-color 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 1.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.journey-index__point--start {
-  top: 0;
+.journey-index__number {
+  position: absolute;
+  top: 50%;
+  left: 19px;
+  transform: translateY(-50%);
+  font-variant-numeric: tabular-nums;
 }
 
-.journey-index__point--end {
-  top: 100%;
+.journey-index__label {
+  position: absolute;
+  top: 50%;
+  left: 47px;
+  overflow: hidden;
+  width: 68px;
+  opacity: 0;
+  transform: translate(-6px, -50%);
+  white-space: nowrap;
+  transition:
+    opacity 0.35s ease,
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.journey-index button:hover,
+.journey-index button:focus-visible,
+.journey-index button[aria-current="step"] {
+  color: var(--foreground);
+}
+
+.journey-index button:hover .journey-index__label,
+.journey-index button:focus-visible .journey-index__label,
+.journey-index button[aria-current="step"] .journey-index__label {
+  opacity: 0.62;
+  transform: translate(0, -50%);
+}
+
+.journey-index button[aria-current="step"] .journey-index__dot {
+  width: 10px;
+  height: 10px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 10%, transparent);
 }
 
 .scroll-cue {
@@ -312,7 +533,7 @@ button {
   font-weight: 500;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  opacity: calc(1 - min(var(--journey-progress) * 5, 0.82));
+  opacity: clamp(0, calc(1 - var(--journey-progress) * 6), 0.82);
   transition: color 1.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -461,7 +682,7 @@ button {
 }
 
 .experience[data-typography-hidden="true"] .interface-header,
-.experience[data-typography-hidden="true"] .hero-identity,
+.experience[data-typography-hidden="true"] .chapter,
 .experience[data-typography-hidden="true"] .journey-index,
 .experience[data-typography-hidden="true"] .scroll-cue,
 .experience[data-typography-hidden="true"] .material-debug-panel {
@@ -505,34 +726,147 @@ button {
   }
 
   .journey-index {
-    left: 20px;
-    opacity: 0.56;
+    top: auto;
+    bottom: 22px;
+    left: 18px;
+    width: calc(100vw - 36px);
+    height: 42px;
+    transform: none;
   }
 
-  .hero-identity {
-    top: 17vh;
+  .journey-index__track {
+    top: 7px;
+    right: 7px;
+    bottom: auto;
+    left: 7px;
+    width: auto;
+    height: 1px;
+  }
+
+  .journey-index__progress {
+    transform: scaleX(var(--journey-progress));
+    transform-origin: left;
+  }
+
+  .journey-index ol {
+    inset: 7px;
+  }
+
+  .journey-index li {
+    top: 0;
+    left: calc(var(--chapter-position) * 100%);
+    transform: translate(-50%, -50%);
+  }
+
+  .journey-index button {
+    width: 38px;
+    height: 38px;
+    transform: translateX(-12px);
+  }
+
+  .journey-index__dot {
+    top: 0;
+    left: 50%;
+  }
+
+  .journey-index__number {
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .journey-index__label {
+    display: none;
+  }
+
+  .chapter {
+    right: auto;
     left: 20px;
     width: calc(100vw - 40px);
   }
 
-  .hero-identity h1 {
-    margin-bottom: 18px;
+  .chapter h1 {
     font-size: clamp(30px, 10.5vw, 42px);
     letter-spacing: 0.42em;
   }
 
-  .hero-identity__role {
+  .chapter h2 {
+    max-width: 310px;
+    font-size: clamp(19px, 6vw, 25px);
+    line-height: 1.35;
+    letter-spacing: 0.2em;
+  }
+
+  .chapter__label,
+  .chapter__role,
+  .chapter__meta,
+  .chapter__location {
     font-size: 8px;
   }
 
-  .hero-identity__statement {
-    margin-top: 13px !important;
-    max-width: 250px;
+  .chapter__label {
+    margin-bottom: 16px !important;
+  }
+
+  .chapter__body {
+    max-width: min(78vw, 310px);
+    margin-top: 16px !important;
+    font-size: 11px;
+    line-height: 1.62;
+  }
+
+  .chapter__meta {
+    max-width: 270px;
+    margin-top: 19px !important;
+    line-height: 1.8;
+  }
+
+  .chapter--origin {
+    top: 17vh;
+  }
+
+  .chapter--stream,
+  .chapter--confluence {
+    top: 17vh;
+    left: auto;
+    right: 20px;
+    width: min(76vw, 300px);
+  }
+
+  .chapter--bookcast {
+    top: 14vh;
+    width: min(80vw, 320px);
+  }
+
+  .chapter--bookcast .chapter__body {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+  }
+
+  .chapter--ocean {
+    top: 14vh;
+  }
+
+  .chapter__location {
+    margin-top: 24px !important;
+  }
+
+  .chapter__links {
+    gap: 24px;
+    margin-top: 20px;
+  }
+
+  .chapter__links a {
+    min-height: 44px;
     font-size: 10px;
   }
 
   .scroll-cue {
-    bottom: 34px;
+    bottom: 76px;
+    width: min(72vw, 300px);
+    text-align: center;
   }
 
   .material-debug-panel {

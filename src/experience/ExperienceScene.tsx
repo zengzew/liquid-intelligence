@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { MutableRefObject } from "react";
 import { CatmullRomCurve3, Vector3 } from "three";
 import type { ExperienceTheme } from "../App";
+import JourneyWorlds from "../journey/JourneyWorlds";
 import River from "../water/River";
 import type { WaterMaterialVariant } from "../water/materialVariants";
 import CameraRig from "./CameraRig";
@@ -10,6 +11,7 @@ import type { JourneyProgress } from "./LiquidExperience";
 
 interface ExperienceSceneProps {
   material: WaterMaterialVariant;
+  showJourneyWorlds: boolean;
   theme: ExperienceTheme;
   progressRef: MutableRefObject<JourneyProgress>;
 }
@@ -37,6 +39,7 @@ function createRiverCurve() {
 
 export default function ExperienceScene({
   material,
+  showJourneyWorlds,
   theme,
   progressRef,
 }: ExperienceSceneProps) {
@@ -51,6 +54,13 @@ export default function ExperienceScene({
         theme={theme}
         progressRef={progressRef}
       />
+      {showJourneyWorlds ? (
+        <JourneyWorlds
+          curve={curve}
+          theme={theme}
+          progressRef={progressRef}
+        />
+      ) : null}
       <CameraRig progressRef={progressRef} />
     </>
   );

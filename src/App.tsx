@@ -1,6 +1,19 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import LiquidExperience from "./experience/LiquidExperience";
 import type { JourneyProgress } from "./experience/LiquidExperience";
+import JourneyNarrative from "./journey/JourneyNarrative";
+import {
+  JOURNEY_CHAPTERS,
+  getActiveJourneyChapter,
+  getJourneyChapterPresence,
+  type JourneyChapter,
+} from "./journey/chapters";
 import MaterialDebugPanel from "./MaterialDebugPanel";
 import {
   isWaterMaterialVariant,
@@ -91,6 +104,10 @@ export default function App() {
     getInitialTypographyState,
   );
   const [debugWater] = useState(getInitialDebugState);
+  const [activeChapterId, setActiveChapterId] = useState(
+    () => getActiveJourneyChapter(initialProgress ?? 0).id,
+  );
+  const activeChapterRef = useRef(activeChapterId);
   const captureMode =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("capture") === "1";
@@ -125,6 +142,10 @@ export default function App() {
 
     window.history.replaceState({}, "", url);
   }, [debugWater, material, progressOverride, theme, typographyHidden]);
+
+  useEffect(() => {
+    document.documentElement.dataset.chapter = activeChapterId;
+  }, [activeChapterId]);
 
   useEffect(() => {
     let runtimeErrorCount = 0;
@@ -207,6 +228,21 @@ export default function App() {
       runway.style.setProperty("--journey-progress", progress.toFixed(5));
       runway.dataset.progress = progress.toFixed(3);
 
+      for (const chapter of JOURNEY_CHAPTERS) {
+        const presence = getJourneyChapterPresence(progress, chapter);
+        runway.style.setProperty(
+          `--chapter-${chapter.id}-presence`,
+          presence.toFixed(5),
+        );
+      }
+
+      const activeChapter = getActiveJourneyChapter(progress);
+
+      if (activeChapter.id !== activeChapterRef.current) {
+        activeChapterRef.current = activeChapter.id;
+        setActiveChapterId(activeChapter.id);
+      }
+
       frameId = window.requestAnimationFrame(renderProgress);
     };
 
@@ -240,6 +276,25 @@ export default function App() {
 
   const restoreTypography = () => setTypographyHidden(false);
 
+  const navigateToChapter = useCallback((chapter: JourneyChapter) => {
+    progressOverrideRef.current = null;
+    progressRef.current.target = chapter.focus;
+    setProgressOverride(null);
+
+    const scrollRange = Math.max(
+      1,
+      document.documentElement.scrollHeight - window.innerHeight,
+    );
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    window.scrollTo({
+      top: chapter.focus * scrollRange,
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
+  }, []);
+
   return (
     <main
       className="experience"
@@ -252,12 +307,17 @@ export default function App() {
       <div className="canvas-shell" aria-hidden="true">
         <LiquidExperience
           material={material}
+          showJourneyWorlds={!debugWater}
           theme={theme}
           progressRef={progressRef}
         />
       </div>
 
-      <div ref={runwayRef} className="scroll-runway">
+      <div
+        ref={runwayRef}
+        className="scroll-runway"
+        data-chapter={activeChapterId}
+      >
         <header className="interface-header">
           <div className="wordmark" aria-label="Zane">
             ZANE
@@ -278,26 +338,23 @@ export default function App() {
           </button>
         </header>
 
-        <section className="hero-identity" aria-labelledby="hero-title">
-          <h1 id="hero-title">ZANE</h1>
-          <p className="hero-identity__role">Software Engineer</p>
-          <p className="hero-identity__statement">
-            Building with AI, code and creativity.
-          </p>
-        </section>
+        <JourneyNarrative
+          activeChapterId={activeChapterId}
+          onNavigate={navigateToChapter}
+        />
 
-        <aside className="journey-index" aria-hidden="true">
-          <span>00</span>
-          <span className="journey-index__track">
-            <span className="journey-index__progress" />
-            <span className="journey-index__point journey-index__point--start" />
-            <span className="journey-index__point journey-index__point--end" />
-          </span>
-          <span>01</span>
-        </aside>
+        <p className="sr-only" aria-live="polite" aria-atomic="true">
+          Now entering{" "}
+          {
+            JOURNEY_CHAPTERS.find(
+              (chapter) => chapter.id === activeChapterId,
+            )?.label
+          }
+          .
+        </p>
 
         <div className="scroll-cue" aria-hidden="true">
-          <span>Scroll</span>
+          <span>Scroll to follow the current</span>
           <span className="scroll-cue__line" />
         </div>
       </div>

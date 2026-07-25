@@ -18,6 +18,7 @@ export interface JourneyProgress {
 
 interface LiquidExperienceProps {
   material: WaterMaterialVariant;
+  showJourneyWorlds: boolean;
   theme: ExperienceTheme;
   progressRef: MutableRefObject<JourneyProgress>;
 }
@@ -32,6 +33,7 @@ function configureRenderer(renderer: WebGLRenderer) {
 
 export default function LiquidExperience({
   material,
+  showJourneyWorlds,
   theme,
   progressRef,
 }: LiquidExperienceProps) {
@@ -55,6 +57,7 @@ export default function LiquidExperience({
     >
       <ExperienceScene
         material={material}
+        showJourneyWorlds={showJourneyWorlds}
         theme={theme}
         progressRef={progressRef}
       />
