@@ -3,11 +3,13 @@ import type { MutableRefObject } from "react";
 import { CatmullRomCurve3, Vector3 } from "three";
 import type { ExperienceTheme } from "../App";
 import River from "../water/River";
+import type { WaterMaterialVariant } from "../water/materialVariants";
 import CameraRig from "./CameraRig";
 import Environment from "./Environment";
 import type { JourneyProgress } from "./LiquidExperience";
 
 interface ExperienceSceneProps {
+  material: WaterMaterialVariant;
   theme: ExperienceTheme;
   progressRef: MutableRefObject<JourneyProgress>;
 }
@@ -34,6 +36,7 @@ function createRiverCurve() {
 }
 
 export default function ExperienceScene({
+  material,
   theme,
   progressRef,
 }: ExperienceSceneProps) {
@@ -42,7 +45,12 @@ export default function ExperienceScene({
   return (
     <>
       <Environment theme={theme} progressRef={progressRef} />
-      <River curve={curve} theme={theme} progressRef={progressRef} />
+      <River
+        curve={curve}
+        material={material}
+        theme={theme}
+        progressRef={progressRef}
+      />
       <CameraRig progressRef={progressRef} />
     </>
   );

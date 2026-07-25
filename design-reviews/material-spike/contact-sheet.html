@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Water Material Reference Spike</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: #101314;
+        color: #f3f4f1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 1600px;
+        min-height: 2000px;
+        margin: 0;
+        padding: 48px;
+        background:
+          radial-gradient(circle at 50% 0%, #252b2d 0, transparent 38%),
+          #101314;
+      }
+
+      header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        margin-bottom: 34px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 500;
+        letter-spacing: -0.02em;
+      }
+
+      header p {
+        margin: 0;
+        color: #899294;
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .sheet {
+        display: grid;
+        grid-template-columns: 132px repeat(3, 1fr);
+        gap: 14px;
+      }
+
+      .column-label,
+      .row-label {
+        color: #899294;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .column-label {
+        align-self: end;
+        padding: 0 0 3px 2px;
+      }
+
+      .row-label {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 7px;
+      }
+
+      .row-label strong {
+        color: #f3f4f1;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .frame {
+        overflow: hidden;
+        aspect-ratio: 16 / 10;
+        border: 1px solid #32383a;
+        border-radius: 8px;
+        background: #050606;
+        box-shadow: 0 18px 42px rgb(0 0 0 / 18%);
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Water Material Reference Spike</h1>
+      <p>Same geometry · same camera · 1440 × 900</p>
+    </header>
+
+    <main class="sheet">
+      <div></div>
+      <div class="column-label">Progress 0.25</div>
+      <div class="column-label">Progress 0.60</div>
+      <div class="column-label">Progress 0.90</div>
+
+      <div class="row-label"><strong>Current</strong><span>Night</span></div>
+      <div class="frame"><img src="current-night-p25.png" alt="" /></div>
+      <div class="frame"><img src="current-night-p60.png" alt="" /></div>
+      <div class="frame"><img src="current-night-p90.png" alt="" /></div>
+
+      <div class="row-label"><strong>Current</strong><span>Morning</span></div>
+      <div class="frame"><img src="current-morning-p25.png" alt="" /></div>
+      <div class="frame"><img src="current-morning-p60.png" alt="" /></div>
+      <div class="frame"><img src="current-morning-p90.png" alt="" /></div>
+
+      <div class="row-label">
+        <strong>Three Water</strong><span>Night</span>
+      </div>
+      <div class="frame"><img src="three-water-night-p25.png" alt="" /></div>
+      <div class="frame"><img src="three-water-night-p60.png" alt="" /></div>
+      <div class="frame"><img src="three-water-night-p90.png" alt="" /></div>
+
+      <div class="row-label">
+        <strong>Three Water</strong><span>Morning</span>
+      </div>
+      <div class="frame"><img src="three-water-morning-p25.png" alt="" /></div>
+      <div class="frame"><img src="three-water-morning-p60.png" alt="" /></div>
+      <div class="frame"><img src="three-water-morning-p90.png" alt="" /></div>
+
+      <div class="row-label"><strong>Physical</strong><span>Night</span></div>
+      <div class="frame"><img src="physical-night-p25.png" alt="" /></div>
+      <div class="frame"><img src="physical-night-p60.png" alt="" /></div>
+      <div class="frame"><img src="physical-night-p90.png" alt="" /></div>
+
+      <div class="row-label"><strong>Physical</strong><span>Morning</span></div>
+      <div class="frame"><img src="physical-morning-p25.png" alt="" /></div>
+      <div class="frame"><img src="physical-morning-p60.png" alt="" /></div>
+      <div class="frame"><img src="physical-morning-p90.png" alt="" /></div>
+    </main>
+  </body>
+</html>

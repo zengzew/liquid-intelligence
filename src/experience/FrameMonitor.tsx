@@ -13,11 +13,19 @@ export default function FrameMonitor() {
   const sample = useRef({
     elapsed: 0,
     frames: 0,
+    drawCalls: 0,
+    triangles: 0,
   });
 
   useFrame(({ gl }, delta) => {
+    const frameDrawCalls = gl.info.render.calls;
+    const frameTriangles = gl.info.render.triangles;
+    gl.info.reset();
+
     sample.current.elapsed += delta;
     sample.current.frames += 1;
+    sample.current.drawCalls += frameDrawCalls;
+    sample.current.triangles += frameTriangles;
 
     if (sample.current.elapsed < 1.5) {
       return;
@@ -25,8 +33,12 @@ export default function FrameMonitor() {
 
     const metrics: LiquidMetrics = {
       fps: Math.round(sample.current.frames / sample.current.elapsed),
-      drawCalls: gl.info.render.calls,
-      triangles: gl.info.render.triangles,
+      drawCalls: Math.round(
+        sample.current.drawCalls / Math.max(1, sample.current.frames),
+      ),
+      triangles: Math.round(
+        sample.current.triangles / Math.max(1, sample.current.frames),
+      ),
       geometries: gl.info.memory.geometries,
       textures: gl.info.memory.textures,
     };
@@ -56,6 +68,8 @@ export default function FrameMonitor() {
     );
     sample.current.elapsed = 0;
     sample.current.frames = 0;
+    sample.current.drawCalls = 0;
+    sample.current.triangles = 0;
   });
 
   return null;

@@ -6,6 +6,7 @@ import {
   type WebGLRenderer,
 } from "three";
 import type { ExperienceTheme } from "../App";
+import type { WaterMaterialVariant } from "../water/materialVariants";
 import ExperienceScene from "./ExperienceScene";
 import FrameMonitor from "./FrameMonitor";
 
@@ -16,6 +17,7 @@ export interface JourneyProgress {
 }
 
 interface LiquidExperienceProps {
+  material: WaterMaterialVariant;
   theme: ExperienceTheme;
   progressRef: MutableRefObject<JourneyProgress>;
 }
@@ -24,16 +26,19 @@ function configureRenderer(renderer: WebGLRenderer) {
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
+  renderer.transmissionResolutionScale = 0.5;
+  renderer.info.autoReset = false;
 }
 
 export default function LiquidExperience({
+  material,
   theme,
   progressRef,
 }: LiquidExperienceProps) {
   return (
     <Canvas
       camera={{ fov: 42, near: 0.08, far: 140, position: [0, 11, -2] }}
-      dpr={[1, 1.5]}
+      dpr={[1, 1.25]}
       flat={false}
       gl={{
         alpha: false,
@@ -48,7 +53,11 @@ export default function LiquidExperience({
         Reflect.set(window, "__LIQUID_RENDERER__", gl);
       }}
     >
-      <ExperienceScene theme={theme} progressRef={progressRef} />
+      <ExperienceScene
+        material={material}
+        theme={theme}
+        progressRef={progressRef}
+      />
       <FrameMonitor />
     </Canvas>
   );
