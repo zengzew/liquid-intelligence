@@ -89,6 +89,18 @@ button {
 
 .canvas-shell::before {
   background:
+    linear-gradient(
+      90deg,
+      var(--background) 0%,
+      var(--background) 25%,
+      transparent 40%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 56%,
+      color-mix(in srgb, var(--background) 72%, transparent) 70%,
+      var(--background) 96%
+    ),
     radial-gradient(
       circle at 62% 48%,
       transparent 18%,

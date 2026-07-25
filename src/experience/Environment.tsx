@@ -8,12 +8,10 @@ import { useFrame, useThree } from "@react-three/fiber";
 import {
   Color,
   DirectionalLight,
-  DoubleSide,
   FogExp2,
   HemisphereLight,
   MathUtils,
   Mesh,
-  MeshBasicMaterial,
   MeshStandardMaterial,
 } from "three";
 import type { ExperienceTheme } from "../App";
@@ -34,8 +32,6 @@ const NIGHT_GROUND_LIGHT = new Color("#010202");
 const MORNING_GROUND_LIGHT = new Color("#a8afb0");
 const NIGHT_KEY_LIGHT = new Color("#d5d6d2");
 const MORNING_KEY_LIGHT = new Color("#ffe9c7");
-const NIGHT_HORIZON = new Color("#101314");
-const MORNING_HORIZON = new Color("#e4ded3");
 
 function SoftboxEnvironment({ theme }: { theme: ExperienceTheme }) {
   const morning = theme === "morning";
@@ -50,26 +46,18 @@ function SoftboxEnvironment({ theme }: { theme: ExperienceTheme }) {
       <Lightformer
         form="rect"
         color={morning ? "#ffd6a0" : "#e3e7e5"}
-        intensity={morning ? 3.1 : 3.35}
-        position={[4.4, 9, 27]}
-        scale={[1.45, 38]}
-        target={[1.7, 0, -16]}
+        intensity={morning ? 2.45 : 2.75}
+        position={[0.8, 9, 27]}
+        scale={[1.05, 38]}
+        target={[0.2, 0, -28]}
       />
       <Lightformer
         form="rect"
         color={morning ? "#aeb9ba" : "#aeb7b8"}
-        intensity={morning ? 1.45 : 1.35}
-        position={[-9.5, 5.5, 15]}
-        scale={[3.8, 25]}
-        target={[-2.2, 0, -27]}
-      />
-      <Lightformer
-        form="rect"
-        color={morning ? "#e7ded0" : "#303839"}
-        intensity={morning ? 0.3 : 0.16}
-        position={[0, 17, 0]}
-        scale={[28, 28]}
-        target={[0, 0, -20]}
+        intensity={morning ? 0.9 : 0.52}
+        position={[-12, 6.5, 12]}
+        scale={[2.4, 18]}
+        target={[-2.5, 0, -35]}
       />
     </ReflectionEnvironment>
   );
@@ -81,7 +69,6 @@ export default function Environment({
 }: EnvironmentProps) {
   const { scene } = useThree();
   const floorRef = useRef<Mesh>(null);
-  const horizonRef = useRef<MeshBasicMaterial>(null);
   const hemisphereRef = useRef<HemisphereLight>(null);
   const keyLightRef = useRef<DirectionalLight>(null);
   const themeValue = useRef(theme === "morning" ? 1 : 0);
@@ -151,34 +138,11 @@ export default function Environment({
         MathUtils.lerp(1.15, 1.85, mix) *
         MathUtils.lerp(0.96, 1.08, progress);
     }
-
-    if (horizonRef.current) {
-      horizonRef.current.color
-        .copy(NIGHT_HORIZON)
-        .lerp(MORNING_HORIZON, mix);
-    }
-
   });
 
   return (
     <>
       <SoftboxEnvironment key={theme} theme={theme} />
-
-      <mesh
-        name="horizon-veil"
-        position={[21, 38, -54]}
-        rotation={[-Math.PI / 2, 0, -0.04]}
-        scale={[34, 116, 1]}
-      >
-        <planeGeometry />
-        <meshBasicMaterial
-          ref={horizonRef}
-          color="#101314"
-          side={DoubleSide}
-          toneMapped={false}
-          fog={false}
-        />
-      </mesh>
 
       <hemisphereLight ref={hemisphereRef} args={["#65696b", "#010202", 0.18]} />
       <directionalLight
@@ -190,10 +154,10 @@ export default function Environment({
 
       <mesh
         ref={floorRef}
-        position={[0, -1.3, -34]}
+        position={[0, -2.8, -48]}
         rotation={[-Math.PI / 2, 0, 0]}
       >
-        <planeGeometry args={[170, 220, 1, 1]} />
+        <planeGeometry args={[260, 420, 1, 1]} />
         <meshStandardMaterial color="#020303" roughness={0.99} metalness={0} />
       </mesh>
     </>
