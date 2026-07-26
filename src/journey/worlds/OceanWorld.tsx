@@ -24,9 +24,9 @@ import {
 } from "./shared";
 
 const NIGHT_OCEAN = new Color("#0c1719");
-const MORNING_OCEAN = new Color("#c5cfcc");
+const MORNING_OCEAN = new Color("#e1e2de");
 const NIGHT_ATTENUATION = new Color("#071011");
-const MORNING_ATTENUATION = new Color("#aebdba");
+const MORNING_ATTENUATION = new Color("#d5dcda");
 
 const oceanGlintVertexShader = /* glsl */ `
   uniform float uMotionScale;
@@ -158,6 +158,7 @@ export default function OceanWorld({
       thickness: 0.32,
       transmission: 0.04,
       transparent: true,
+      depthTest: false,
       depthWrite: false,
     });
 
@@ -221,10 +222,10 @@ export default function OceanWorld({
     oceanMaterial.attenuationColor
       .copy(NIGHT_ATTENUATION)
       .lerp(MORNING_ATTENUATION, mix);
-    oceanMaterial.opacity = presence * MathUtils.lerp(0.9, 0.86, mix);
+    oceanMaterial.opacity = presence;
     oceanMaterial.roughness = MathUtils.lerp(0.2, 0.24, mix);
-    oceanMaterial.transmission = MathUtils.lerp(0.04, 0.12, mix);
-    oceanMaterial.envMapIntensity = MathUtils.lerp(1.28, 1.16, mix);
+    oceanMaterial.transmission = 0;
+    oceanMaterial.envMapIntensity = MathUtils.lerp(1.28, 1.02, mix);
     normalTexture.offset.set(time * 0.0025, -time * 0.0045);
 
     if (shaderRef.current) {
@@ -247,15 +248,15 @@ export default function OceanWorld({
       <mesh
         geometry={geometry}
         material={oceanMaterial}
-        position={[0, -0.73, -24.5]}
+        position={[0, -0.64, -24.5]}
         rotation={[-Math.PI / 2, 0, 0]}
         frustumCulled={false}
-        renderOrder={2}
+        renderOrder={7}
       />
       <mesh
         geometry={geometry}
         material={glintMaterial}
-        position={[0, -0.69, -24.5]}
+        position={[0, -0.61, -24.5]}
         rotation={[-Math.PI / 2, 0, 0]}
         frustumCulled={false}
         renderOrder={8}

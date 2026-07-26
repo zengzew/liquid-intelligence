@@ -3,6 +3,7 @@ const reflectionFragmentShader = /* glsl */ `
 
   uniform float uTime;
   uniform float uReveal;
+  uniform float uProgress;
   uniform float uTheme;
   uniform float uReflectionMode;
 
@@ -98,6 +99,14 @@ const reflectionFragmentShader = /* glsl */ `
         vAcross * 3.4
       ))
     );
+    float threadBreak = smoothstep(
+      0.56,
+      0.79,
+      noise21(vec2(
+        vLongitudinal * 43.0 - uTime * 0.16,
+        streamCoordinate * 6.7 + 0.31
+      ))
+    );
 
     float edgeDistance = 1.0 - abs(vAcross);
     float edgeNoise = noise21(vec2(
@@ -168,21 +177,25 @@ const reflectionFragmentShader = /* glsl */ `
       rippleRidge *
       rippleBreak *
       mix(0.08, 1.0, transverseBreak) *
-      (softBand * 0.32 + sideBand * 0.16);
+      (0.12 + softBand * 0.46 + sideBand * 0.2);
     float reflection =
-      bands * mix(0.95, 0.7, uTheme) +
-      glassThread * lineBreak * mix(0.32, 0.2, uTheme) +
+      bands * mix(0.5, 0.32, uTheme) +
+      glassThread *
+        lineBreak *
+        threadBreak *
+        mix(0.48, 0.28, uTheme) +
       secondaryThread *
         broadPatch *
-        mix(0.18, 0.12, uTheme) +
-      brokenRipples * mix(0.58, 0.36, uTheme) +
-      edgeSheen * mix(0.16, 0.11, uTheme);
+        threadBreak *
+        mix(0.24, 0.15, uTheme) +
+      brokenRipples * mix(0.84, 0.48, uTheme) +
+      edgeSheen * mix(0.14, 0.095, uTheme);
     reflection *= mix(0.58, 1.2, fresnel);
     reflection += abs(vWave) * mix(0.9, 0.5, uTheme);
     reflection *= mix(1.45, 1.08, uTheme);
 
     float baseSheen =
-      mix(0.022, 0.055, uTheme) *
+      mix(0.012, 0.028, uTheme) *
       mix(0.45, 1.0, fresnel);
     float sourceSheen =
       (1.0 - smoothstep(0.015, 0.11, vLongitudinal)) *
@@ -191,6 +204,11 @@ const reflectionFragmentShader = /* glsl */ `
       (baseSheen + sourceSheen + reflection) *
       edgeMask *
       revealMask();
+    float oceanBlend =
+      smoothstep(0.8, 0.91, uProgress) *
+      smoothstep(0.7, 0.92, vLongitudinal);
+    float oceanPath = exp(-pow(streamCoordinate / 0.085, 2.0));
+    alpha *= mix(1.0, oceanPath * 0.26, oceanBlend);
 
     if (alpha < 0.008) {
       discard;

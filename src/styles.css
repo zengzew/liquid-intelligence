@@ -15,11 +15,11 @@
 
 :root[data-theme="morning"] {
   color-scheme: light;
-  --background: #f3f0e9;
+  --background: #f5f2ec;
   --foreground: #282a2b;
   --muted: rgba(40, 42, 43, 0.64);
   --hairline: rgba(40, 42, 43, 0.2);
-  --veil: rgba(243, 240, 233, 0.18);
+  --veil: rgba(245, 242, 236, 0.18);
 }
 
 * {
@@ -92,29 +92,46 @@ button {
     linear-gradient(
       90deg,
       var(--background) 0%,
-      var(--background) 25%,
-      transparent 40%
+      color-mix(in srgb, var(--background) 96%, transparent) 11%,
+      color-mix(in srgb, var(--background) 42%, transparent) 24%,
+      transparent 38%
     ),
     linear-gradient(
       180deg,
-      transparent 56%,
-      color-mix(in srgb, var(--background) 72%, transparent) 70%,
-      var(--background) 96%
+      transparent 68%,
+      color-mix(in srgb, var(--background) 26%, transparent) 82%,
+      color-mix(in srgb, var(--background) 78%, transparent) 100%
     ),
     radial-gradient(
       circle at 62% 48%,
-      transparent 18%,
-      color-mix(in srgb, var(--background) 12%, transparent) 62%,
-      color-mix(in srgb, var(--background) 52%, transparent) 100%
+      transparent 28%,
+      color-mix(in srgb, var(--background) 8%, transparent) 68%,
+      color-mix(in srgb, var(--background) 32%, transparent) 100%
     ),
     linear-gradient(
       90deg,
-      color-mix(in srgb, var(--veil) 82%, transparent),
-      transparent 38%,
-      transparent 78%,
-      var(--veil)
+      color-mix(in srgb, var(--veil) 62%, transparent),
+      transparent 32%,
+      transparent 86%,
+      color-mix(in srgb, var(--veil) 52%, transparent)
     );
   mix-blend-mode: normal;
+}
+
+:root[data-chapter="ocean"] .canvas-shell::before {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--background) 84%, transparent) 0%,
+      color-mix(in srgb, var(--background) 38%, transparent) 22%,
+      transparent 42%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 70%,
+      color-mix(in srgb, var(--background) 16%, transparent) 88%,
+      color-mix(in srgb, var(--background) 56%, transparent) 100%
+    );
 }
 
 .canvas-shell::after {
@@ -211,7 +228,7 @@ button {
 
 .chapter h2 {
   max-width: 390px;
-  font-size: clamp(22px, 2.05vw, 32px);
+  font-size: clamp(21px, 1.85vw, 29px);
   line-height: 1.34;
   letter-spacing: 0.25em;
 }
@@ -228,7 +245,7 @@ button {
 }
 
 .chapter__label {
-  margin-bottom: 24px !important;
+  margin-bottom: 18px !important;
   color: var(--muted);
 }
 
@@ -239,7 +256,7 @@ button {
 
 .chapter__body {
   max-width: 390px;
-  margin-top: 22px !important;
+  margin-top: 18px !important;
   color: var(--muted);
   font-size: clamp(12px, 0.88vw, 13px);
   font-weight: 400;
@@ -260,37 +277,156 @@ button {
 
 .chapter--origin {
   --chapter-presence: var(--chapter-origin-presence);
-  top: 31vh;
-  left: clamp(118px, 12.7vw, 196px);
+  top: 37vh;
+  left: clamp(210px, 22.5vw, 350px);
 }
 
 .chapter--stream {
   --chapter-presence: var(--chapter-stream-presence);
-  top: 39vh;
-  right: clamp(86px, 8.2vw, 136px);
+  top: 34vh;
+  left: clamp(82px, 8.5vw, 136px);
 }
 
 .chapter--bookcast {
   --chapter-presence: var(--chapter-bookcast-presence);
-  top: 24vh;
-  left: clamp(108px, 7.6vw, 132px);
-  width: min(29vw, 410px);
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
 }
 
-.chapter--bookcast .chapter__body {
-  max-width: 380px;
+.chapter--bookcast .chapter__intro {
+  position: absolute;
+  top: 30vh;
+  left: clamp(82px, 8.5vw, 136px);
 }
 
 .chapter--confluence {
   --chapter-presence: var(--chapter-confluence-presence);
-  top: 47vh;
-  right: clamp(80px, 7.5vw, 128px);
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+.chapter--confluence .chapter__intro {
+  position: absolute;
+  top: 31vh;
+  left: clamp(82px, 8.5vw, 136px);
 }
 
 .chapter--ocean {
   --chapter-presence: var(--chapter-ocean-presence);
-  top: 17vh;
-  left: clamp(108px, 10vw, 164px);
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+.chapter--ocean .chapter__intro {
+  position: absolute;
+  top: 26vh;
+  left: clamp(82px, 8.5vw, 136px);
+}
+
+.project-rail {
+  position: absolute;
+  top: 30vh;
+  right: clamp(72px, 8.2vw, 132px);
+  display: grid;
+  min-height: 228px;
+  padding: 24px 0 22px 28px;
+  align-content: center;
+  border-left: 1px solid var(--hairline);
+  color: var(--foreground);
+}
+
+.project-rail::before,
+.project-rail::after,
+.project-rail__node,
+.tributary-grid__node,
+.tributary-grid article::after {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: var(--background);
+  content: "";
+  transition:
+    color 1.2s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.project-rail::before {
+  top: 0;
+  left: -4px;
+}
+
+.project-rail::after {
+  bottom: 0;
+  left: -4px;
+}
+
+.project-rail__node {
+  top: 50%;
+  left: -4px;
+  transform: translateY(-50%);
+}
+
+.project-rail h3,
+.tributary-grid h3 {
+  margin: 0;
+  color: var(--foreground);
+  font-size: clamp(13px, 1.05vw, 16px);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.project-rail p,
+.tributary-grid p {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.75;
+}
+
+.project-rail > div > span {
+  display: block;
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.tributary-grid {
+  position: absolute;
+  top: 28vh;
+  right: clamp(54px, 6vw, 96px);
+  left: clamp(360px, 29vw, 460px);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(24px, 4vw, 68px);
+}
+
+.tributary-grid article {
+  position: relative;
+  min-height: 250px;
+  padding: 44px 0 22px 22px;
+  border-left: 1px solid var(--hairline);
+}
+
+.tributary-grid__node {
+  top: 0;
+  left: -4px;
+}
+
+.tributary-grid article::after {
+  bottom: 0;
+  left: -4px;
 }
 
 .chapter__links {
@@ -298,6 +434,24 @@ button {
   align-items: center;
   gap: 34px;
   margin-top: 34px;
+}
+
+.contact-rail {
+  position: absolute;
+  right: clamp(30px, 4.3vw, 68px);
+  bottom: 26px;
+  left: clamp(82px, 8.5vw, 136px);
+  gap: 38px;
+  margin-top: 0;
+}
+
+.contact-rail__location {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
 }
 
 .chapter__links a {
@@ -409,7 +563,7 @@ button {
   top: 50%;
   left: clamp(24px, 4.3vw, 68px);
   width: 116px;
-  height: clamp(176px, 28vh, 248px);
+  height: clamp(220px, 38vh, 342px);
   transform: translateY(-50%);
   font-size: 7px;
   font-weight: 500;
@@ -501,30 +655,13 @@ button {
 }
 
 .journey-index__label {
-  position: absolute;
-  top: 50%;
-  left: 47px;
-  overflow: hidden;
-  width: 68px;
-  opacity: 0;
-  transform: translate(-6px, -50%);
-  white-space: nowrap;
-  transition:
-    opacity 0.35s ease,
-    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  display: none;
 }
 
 .journey-index button:hover,
 .journey-index button:focus-visible,
 .journey-index button[aria-current="step"] {
   color: var(--foreground);
-}
-
-.journey-index button:hover .journey-index__label,
-.journey-index button:focus-visible .journey-index__label,
-.journey-index button[aria-current="step"] .journey-index__label {
-  opacity: 0.62;
-  transform: translate(0, -50%);
 }
 
 .journey-index button[aria-current="step"] .journey-index__dot {
@@ -834,31 +971,97 @@ button {
   }
 
   .chapter--origin {
-    top: 17vh;
+    top: 18vh;
   }
 
-  .chapter--stream,
-  .chapter--confluence {
+  .chapter--stream {
     top: 17vh;
-    left: auto;
-    right: 20px;
-    width: min(76vw, 300px);
+    left: 20px;
+    width: min(72vw, 290px);
   }
 
   .chapter--bookcast {
-    top: 14vh;
-    width: min(80vw, 320px);
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
   }
 
-  .chapter--bookcast .chapter__body {
-    display: -webkit-box;
+  .chapter--bookcast .chapter__intro {
+    top: 14vh;
+    left: 20px;
+  }
+
+  .project-rail {
+    top: 49vh;
+    right: 20px;
+    min-height: 186px;
+    padding: 20px 0 18px 20px;
+  }
+
+  .project-rail h3 {
+    font-size: 13px;
+  }
+
+  .project-rail p {
+    margin-top: 13px;
+    font-size: 8px;
+  }
+
+  .project-rail > div > span {
+    max-width: 145px;
+    margin-top: 14px;
+    font-size: 6px;
+    line-height: 1.6;
+  }
+
+  .chapter--confluence {
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .chapter--confluence .chapter__intro {
+    top: 13vh;
+    left: 20px;
+  }
+
+  .tributary-grid {
+    top: 43vh;
+    right: 18px;
+    left: 18px;
+    gap: 12px;
+  }
+
+  .tributary-grid article {
+    min-height: 172px;
+    padding: 30px 0 16px 10px;
+  }
+
+  .tributary-grid h3 {
     overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 5;
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tributary-grid p {
+    margin-top: 12px;
+    font-size: 7px;
+    line-height: 1.65;
   }
 
   .chapter--ocean {
-    top: 14vh;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .chapter--ocean .chapter__intro {
+    top: 15vh;
+    left: 20px;
   }
 
   .chapter__location {
@@ -873,6 +1076,18 @@ button {
   .chapter__links a {
     min-height: 44px;
     font-size: 10px;
+  }
+
+  .contact-rail {
+    right: 20px;
+    bottom: 54px;
+    left: 20px;
+    gap: 26px;
+    margin-top: 0;
+  }
+
+  .contact-rail__location {
+    display: none;
   }
 
   .scroll-cue {

@@ -2,6 +2,7 @@ const skirtFragmentShader = /* glsl */ `
   precision highp float;
 
   uniform float uReveal;
+  uniform float uProgress;
   uniform float uTheme;
 
   varying vec2 vSkirtUv;
@@ -19,7 +20,14 @@ const skirtFragmentShader = /* glsl */ `
     vec3 nightDeep = vec3(0.018, 0.021, 0.022);
     vec3 morningDeep = vec3(0.35, 0.39, 0.4);
     vec3 color = mix(nightDeep, morningDeep, uTheme);
-    float alpha = reveal * depthGradient * mix(0.54, 0.28, uTheme);
+    float oceanBlend =
+      smoothstep(0.8, 0.91, uProgress) *
+      smoothstep(0.7, 0.92, vLongitudinal);
+    float alpha =
+      reveal *
+      depthGradient *
+      mix(0.54, 0.28, uTheme) *
+      mix(1.0, 0.06, oceanBlend);
 
     if (alpha < 0.008) {
       discard;

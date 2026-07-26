@@ -23,9 +23,9 @@ interface EnvironmentProps {
 }
 
 const NIGHT_BACKGROUND = new Color("#020303");
-const MORNING_BACKGROUND = new Color("#f3f0e9");
+const MORNING_BACKGROUND = new Color("#f5f2ec");
 const NIGHT_GROUND = new Color("#020303");
-const MORNING_GROUND = new Color("#e8e4dc");
+const MORNING_GROUND = new Color("#f1eee8");
 const NIGHT_SKY = new Color("#65696b");
 const MORNING_SKY = new Color("#fff8ea");
 const NIGHT_GROUND_LIGHT = new Color("#010202");

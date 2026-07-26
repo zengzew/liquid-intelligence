@@ -3,6 +3,7 @@ const flowDetailsFragmentShader = /* glsl */ `
 
   uniform float uTime;
   uniform float uReveal;
+  uniform float uProgress;
   uniform float uTheme;
 
   varying float vAcross;
@@ -82,6 +83,22 @@ const flowDetailsFragmentShader = /* glsl */ `
         streamCoordinate * 4.7
       ))
     );
+    float longitudinalBreak = smoothstep(
+      0.58,
+      0.8,
+      noise21(vec2(
+        vLongitudinal * 47.0 - uTime * 0.18,
+        streamCoordinate * 7.1
+      ))
+    );
+    float fineBreak = smoothstep(
+      0.56,
+      0.78,
+      noise21(vec2(
+        vLongitudinal * 61.0 + uTime * 0.11,
+        streamCoordinate * 9.3 + 0.37
+      ))
+    );
     float softCurrent =
       exp(-pow((streamCoordinate - 0.16) / 0.14, 2.0)) *
       smoothstep(
@@ -95,9 +112,9 @@ const flowDetailsFragmentShader = /* glsl */ `
     float downstream = smoothstep(0.04, 0.48, vLongitudinal);
     float currents =
       (
-        mainFilaments * broken * 0.74 +
-        fineFilaments * secondaryBreak * 0.46 +
-        softCurrent * 0.23
+        mainFilaments * broken * longitudinalBreak * 0.82 +
+        fineFilaments * secondaryBreak * fineBreak * 0.52 +
+        softCurrent * longitudinalBreak * 0.18
       ) *
       mix(0.32, 1.0, downstream);
 
@@ -120,6 +137,11 @@ const flowDetailsFragmentShader = /* glsl */ `
       (currents * mix(0.36, 0.22, uTheme) +
         edgeBreakup * mix(0.14, 0.095, uTheme)) *
       reveal;
+    float oceanBlend =
+      smoothstep(0.8, 0.91, uProgress) *
+      smoothstep(0.7, 0.92, vLongitudinal);
+    float oceanPath = exp(-pow(streamCoordinate / 0.07, 2.0));
+    alpha *= mix(1.0, oceanPath * 0.18, oceanBlend);
 
     if (alpha < 0.008) {
       discard;

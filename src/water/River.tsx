@@ -50,9 +50,9 @@ const MORNING_BODY = new Color("#7f8b8d");
 const NIGHT_ATTENUATION = new Color("#080d0e");
 const MORNING_ATTENUATION = new Color("#c4cbca");
 const NIGHT_PHYSICAL_BODY = new Color("#526a72");
-const MORNING_PHYSICAL_BODY = new Color("#657a7d");
+const MORNING_PHYSICAL_BODY = new Color("#b7c0be");
 const NIGHT_PHYSICAL_ATTENUATION = new Color("#1b3038");
-const MORNING_PHYSICAL_ATTENUATION = new Color("#8f9e9b");
+const MORNING_PHYSICAL_ATTENUATION = new Color("#c9d1ce");
 const NIGHT_PHYSICAL_SPECULAR = new Color("#dfe4e2");
 const MORNING_PHYSICAL_SPECULAR = new Color("#f1c994");
 const NIGHT_THREE_WATER = new Color("#26353a");
@@ -449,6 +449,7 @@ export default function River({
     (shader: WebGLProgramParametersWithUniforms) => {
       shader.uniforms.uWaterTime = uniforms.uTime;
       shader.uniforms.uReveal = uniforms.uReveal;
+      shader.uniforms.uProgress = uniforms.uProgress;
       shader.uniforms.uTheme = uniforms.uTheme;
 
       shader.vertexShader = shader.vertexShader
@@ -475,6 +476,7 @@ export default function River({
           `#include <common>
           uniform float uWaterTime;
           uniform float uReveal;
+          uniform float uProgress;
           uniform float uTheme;
           varying vec2 vRiverUv;
           varying float vRiverLongitudinal;
@@ -550,9 +552,9 @@ export default function River({
           `#include <normal_fragment_maps>
           #ifdef USE_NORMALMAP_TANGENTSPACE
             vec2 riverFlowNormal =
-              riverNormalA.xy * 0.18 +
-              riverNormalB.yx * 0.11 +
-              vec2(riverBreakA - 0.5, riverBreakB - 0.5) * 0.1;
+              riverNormalA.xy * 0.34 +
+              riverNormalB.yx * 0.22 +
+              vec2(riverBreakA - 0.5, riverBreakB - 0.5) * 0.14;
             vec3 riverMapNormal = normalize(vec3(riverFlowNormal, 1.0));
             normal = normalize(tbn * riverMapNormal);
           #endif`,
@@ -580,6 +582,9 @@ export default function River({
               vRiverLongitudinal
             )) *
             smoothstep(0.0, 0.004, vRiverLongitudinal);
+          float riverOceanBlend =
+            smoothstep(0.8, 0.91, uProgress) *
+            smoothstep(0.7, 0.92, vRiverLongitudinal);
           float riverMottle = texture2D(
             normalMap,
             vec2(
@@ -590,7 +595,10 @@ export default function River({
           diffuseColor.rgb *=
             1.0 +
             (riverMottle - 0.5) * mix(0.075, 0.055, uTheme);
-          diffuseColor.a *= riverEdgeMask * riverRevealMask;
+          diffuseColor.a *=
+            riverEdgeMask *
+            riverRevealMask *
+            mix(1.0, 0.03, riverOceanBlend);
           if (diffuseColor.a < 0.006) discard;`,
         )
         .replace(
@@ -610,8 +618,8 @@ export default function River({
               0.5 +
               0.5;
             float riverReflectionBreak =
-              smoothstep(0.55, 0.82, riverBreakup) *
-              smoothstep(0.54, 0.8, riverCrossRipple);
+              smoothstep(0.72, 0.92, riverBreakup) *
+              smoothstep(0.72, 0.93, riverCrossRipple);
             float riverReflectionEdge = smoothstep(
               0.035,
               0.2,
@@ -621,8 +629,8 @@ export default function River({
               riverReflectionBreak *
               riverReflectionEdge *
               (0.24 + riverFresnel * 0.76);
-            vec3 riverNightReflection = vec3(0.15, 0.165, 0.17);
-            vec3 riverMorningReflection = vec3(0.22, 0.09, 0.02);
+            vec3 riverNightReflection = vec3(0.62, 0.68, 0.69);
+            vec3 riverMorningReflection = vec3(0.64, 0.46, 0.27);
             outgoingLight +=
               mix(
                 riverNightReflection,
@@ -630,7 +638,7 @@ export default function River({
                 uTheme
               ) *
               riverReflectionMask *
-              mix(0.1, 0.52, uTheme);
+              mix(0.32, 0.22, uTheme);
           #endif
           #include <opaque_fragment>`,
         );
@@ -710,7 +718,7 @@ export default function River({
       return;
     }
 
-    material.customProgramCacheKey = () => "liquid-physical-water-v8";
+    material.customProgramCacheKey = () => "liquid-physical-water-v11";
     material.needsUpdate = true;
   }, [materialVariant]);
 
@@ -796,11 +804,11 @@ export default function River({
       physicalMaterial.specularColor
         .copy(NIGHT_PHYSICAL_SPECULAR)
         .lerp(MORNING_PHYSICAL_SPECULAR, mix);
-      physicalMaterial.opacity = MathUtils.lerp(0.93, 0.9, mix);
+      physicalMaterial.opacity = MathUtils.lerp(0.78, 0.42, mix);
       physicalMaterial.roughness = MathUtils.lerp(0.13, 0.17, mix);
-      physicalMaterial.transmission = MathUtils.lerp(0.15, 0.28, mix);
-      physicalMaterial.thickness = MathUtils.lerp(0.2, 0.25, mix);
-      physicalMaterial.envMapIntensity = MathUtils.lerp(1.82, 1.68, mix);
+      physicalMaterial.transmission = MathUtils.lerp(0.2, 0.52, mix);
+      physicalMaterial.thickness = MathUtils.lerp(0.2, 0.18, mix);
+      physicalMaterial.envMapIntensity = MathUtils.lerp(1.82, 1.42, mix);
       physicalMaterial.clearcoat = MathUtils.lerp(0.7, 0.62, mix);
       physicalMaterial.clearcoatRoughness = MathUtils.lerp(0.15, 0.17, mix);
       physicalMaterial.specularIntensity = MathUtils.lerp(0.92, 0.84, mix);
@@ -842,8 +850,8 @@ export default function River({
           uniforms={uniforms}
           vertexShader={depthVertexShader}
           fragmentShader={depthFragmentShader}
-          transparent={false}
-          depthWrite
+          transparent
+          depthWrite={false}
           depthTest
           side={DoubleSide}
           toneMapped
@@ -891,96 +899,34 @@ export default function River({
       </mesh>
 
       {materialVariant === "current" ? (
-        <>
-          <mesh
-            geometry={surfaceGeometry}
-            frustumCulled={false}
-            renderOrder={2}
-          >
-            <meshPhysicalMaterial
-              ref={bodyMaterialRef}
-              color="#30383b"
-              roughness={0.18}
-              metalness={0}
-              transmission={0.15}
-              thickness={0.42}
-              attenuationDistance={10}
-              attenuationColor="#151a1c"
-              ior={1.333}
-              clearcoat={0.94}
-              clearcoatRoughness={0.14}
-              envMapIntensity={1.05}
-              opacity={0.5}
-              transparent
-              depthWrite={false}
-              depthTest
-              side={DoubleSide}
-              blending={NormalBlending}
-              toneMapped
-              onBeforeCompile={configureBodyShader}
-            />
-          </mesh>
-
-          <mesh
-            geometry={surfaceGeometry}
-            position={[0, 0.009, 0]}
-            frustumCulled={false}
-            renderOrder={3}
-          >
-            <shaderMaterial
-              ref={nightReflectionMaterialRef}
-              uniforms={nightReflectionUniforms}
-              vertexShader={surfaceVertexShader}
-              fragmentShader={reflectionFragmentShader}
-              transparent
-              depthWrite={false}
-              depthTest={false}
-              side={DoubleSide}
-              blending={AdditiveBlending}
-              toneMapped
-            />
-          </mesh>
-
-          <mesh
-            geometry={surfaceGeometry}
-            position={[0, 0.012, 0]}
-            frustumCulled={false}
-            renderOrder={4}
-          >
-            <shaderMaterial
-              ref={morningReflectionMaterialRef}
-              uniforms={morningReflectionUniforms}
-              vertexShader={surfaceVertexShader}
-              fragmentShader={reflectionFragmentShader}
-              transparent
-              depthWrite={false}
-              depthTest={false}
-              side={DoubleSide}
-              blending={NormalBlending}
-              toneMapped
-            />
-          </mesh>
-
-          <mesh
-            geometry={surfaceGeometry}
-            position={[0, 0.016, 0]}
-            frustumCulled={false}
-            renderOrder={5}
-          >
-            <shaderMaterial
-              ref={flowMaterialRef}
-              uniforms={uniforms}
-              vertexShader={surfaceVertexShader}
-              fragmentShader={flowDetailsFragmentShader}
-              transparent
-              depthWrite={false}
-              depthTest={false}
-              side={DoubleSide}
-              blending={NormalBlending}
-              toneMapped
-            />
-          </mesh>
-        </>
+        <mesh
+          geometry={surfaceGeometry}
+          frustumCulled={false}
+          renderOrder={2}
+        >
+          <meshPhysicalMaterial
+            ref={bodyMaterialRef}
+            color="#30383b"
+            roughness={0.18}
+            metalness={0}
+            transmission={0.15}
+            thickness={0.42}
+            attenuationDistance={10}
+            attenuationColor="#151a1c"
+            ior={1.333}
+            clearcoat={0.94}
+            clearcoatRoughness={0.14}
+            envMapIntensity={1.05}
+            opacity={0.5}
+            transparent
+            depthWrite={false}
+            depthTest
+            side={DoubleSide}
+            blending={NormalBlending}
+            toneMapped
+            onBeforeCompile={configureBodyShader}
+          />
+        </mesh>
       ) : null}
 
       {materialVariant === "physical" && normalTexture ? (
@@ -1016,6 +962,70 @@ export default function River({
             onBeforeCompile={configurePhysicalShader}
           />
         </mesh>
+      ) : null}
+
+      {materialVariant === "current" || materialVariant === "physical" ? (
+        <>
+          <mesh
+            geometry={surfaceGeometry}
+            position={[0, 0.009, 0]}
+            frustumCulled={false}
+            renderOrder={4}
+          >
+            <shaderMaterial
+              ref={nightReflectionMaterialRef}
+              uniforms={nightReflectionUniforms}
+              vertexShader={surfaceVertexShader}
+              fragmentShader={reflectionFragmentShader}
+              transparent
+              depthWrite={false}
+              depthTest={false}
+              side={DoubleSide}
+              blending={AdditiveBlending}
+              toneMapped
+            />
+          </mesh>
+
+          <mesh
+            geometry={surfaceGeometry}
+            position={[0, 0.012, 0]}
+            frustumCulled={false}
+            renderOrder={5}
+          >
+            <shaderMaterial
+              ref={morningReflectionMaterialRef}
+              uniforms={morningReflectionUniforms}
+              vertexShader={surfaceVertexShader}
+              fragmentShader={reflectionFragmentShader}
+              transparent
+              depthWrite={false}
+              depthTest={false}
+              side={DoubleSide}
+              blending={NormalBlending}
+              toneMapped
+            />
+          </mesh>
+
+          <mesh
+            geometry={surfaceGeometry}
+            position={[0, 0.016, 0]}
+            frustumCulled={false}
+            renderOrder={6}
+          >
+            <shaderMaterial
+              ref={flowMaterialRef}
+              uniforms={uniforms}
+              vertexShader={surfaceVertexShader}
+              fragmentShader={flowDetailsFragmentShader}
+              transparent
+              depthWrite={false}
+              depthTest={false}
+              side={DoubleSide}
+              blending={NormalBlending}
+              toneMapped
+            />
+          </mesh>
+        </>
       ) : null}
 
       {threeWater ? <primitive object={threeWater} dispose={null} /> : null}

@@ -354,7 +354,7 @@ export default function App() {
         </p>
 
         <div className="scroll-cue" aria-hidden="true">
-          <span>Scroll to follow the current</span>
+          <span>Scroll</span>
           <span className="scroll-cue__line" />
         </div>
       </div>

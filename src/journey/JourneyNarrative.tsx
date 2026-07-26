@@ -35,7 +35,7 @@ function ChapterIndex({
               <button
                 type="button"
                 aria-current={isActive ? "step" : undefined}
-                aria-label={`Go to ${chapter.label}, chapter ${chapter.index} of ${JOURNEY_CHAPTERS.length}`}
+                aria-label={`Go to ${chapter.label}, chapter ${chapter.index + 1} of ${JOURNEY_CHAPTERS.length}`}
                 onClick={() => onNavigate(chapter)}
               >
                 <span className="journey-index__dot" aria-hidden="true" />
@@ -89,11 +89,12 @@ export default function JourneyNarrative({
         aria-labelledby="stream-title"
         aria-hidden={activeChapterId !== "stream"}
       >
-        <p className="chapter__label">Stream · 02</p>
-        <h2 id="stream-title">Engineering the current</h2>
+        <p className="chapter__label">01</p>
+        <h2 id="stream-title">Source</h2>
         <p className="chapter__body">
-          I turn complex systems into clear, resilient experiences — across AI,
-          backend architecture and creative code.
+          Every journey begins
+          <br />
+          with curiosity.
         </p>
       </section>
 
@@ -102,16 +103,32 @@ export default function JourneyNarrative({
         aria-labelledby="bookcast-title"
         aria-hidden={activeChapterId !== "bookcast"}
       >
-        <p className="chapter__label">River · 03</p>
-        <h2 id="bookcast-title">BookCast AI</h2>
-        <p className="chapter__body">
-          A local-first AI systems project exploring how a manuscript becomes a
-          structured two-host conversation. The proven slice runs from upload
-          to a playable MP3; provider-backed validation is still in progress.
-        </p>
-        <p className="chapter__meta">
-          LangGraph · FastAPI · React · PostgreSQL
-        </p>
+        <div className="chapter__intro">
+          <p className="chapter__label">02</p>
+          <h2 id="bookcast-title">River</h2>
+          <p className="chapter__body">
+            Ideas connect.
+            <br />
+            Systems take shape.
+            <br />
+            Projects flow.
+          </p>
+        </div>
+
+        <div className="project-rail" aria-label="Featured project">
+          <span className="project-rail__node" aria-hidden="true" />
+          <div>
+            <h3>BookCast AI</h3>
+            <p>
+              Local-first AI system
+              <br />
+              Structured dialogue
+              <br />
+              Playable MP3
+            </p>
+            <span>LangGraph · FastAPI · React</span>
+          </div>
+        </div>
       </section>
 
       <section
@@ -119,12 +136,51 @@ export default function JourneyNarrative({
         aria-labelledby="confluence-title"
         aria-hidden={activeChapterId !== "confluence"}
       >
-        <p className="chapter__label">Confluence · 04</p>
-        <h2 id="confluence-title">More currents meet here</h2>
-        <p className="chapter__body">
-          The next tributaries are forming around agent reliability,
-          human-centered AI and creative systems.
-        </p>
+        <div className="chapter__intro">
+          <p className="chapter__label">03</p>
+          <h2 id="confluence-title">Tributaries</h2>
+          <p className="chapter__body">
+            Different paths,
+            <br />
+            one direction.
+          </p>
+        </div>
+
+        <div className="tributary-grid" aria-label="Project currents">
+          <article>
+            <span className="tributary-grid__node" aria-hidden="true" />
+            <h3>XiaoBaiKing</h3>
+            <p>
+              WeChat mini program
+              <br />
+              Real-time sync
+              <br />
+              Game systems
+            </p>
+          </article>
+          <article>
+            <span className="tributary-grid__node" aria-hidden="true" />
+            <h3>WebGL Lab</h3>
+            <p>
+              Creative coding
+              <br />
+              Three.js
+              <br />
+              Visual systems
+            </p>
+          </article>
+          <article>
+            <span className="tributary-grid__node" aria-hidden="true" />
+            <h3>Open Source</h3>
+            <p>
+              Tools &amp; libraries
+              <br />
+              Sharing
+              <br />
+              Learning
+            </p>
+          </article>
+        </div>
       </section>
 
       <section
@@ -132,21 +188,16 @@ export default function JourneyNarrative({
         aria-labelledby="ocean-title"
         aria-hidden={!oceanIsActive}
       >
-        <p className="chapter__label">Ocean · 05</p>
-        <h2 id="ocean-title">The river opens</h2>
-        <p className="chapter__body">
-          I’m open to thoughtful teams building useful AI and durable digital
-          experiences.
-        </p>
-        <p className="chapter__location">Shanghai, China</p>
-        <div className="chapter__links" aria-label="Contact links">
-          <a
-            href="mailto:wzengze@163.com"
-            tabIndex={oceanIsActive ? 0 : -1}
-          >
-            Email
-            <span aria-hidden="true">↗</span>
-          </a>
+        <div className="chapter__intro">
+          <p className="chapter__label">04</p>
+          <h2 id="ocean-title">Ocean</h2>
+          <p className="chapter__body">
+            Keep building.
+            <br />
+            Beyond the horizon.
+          </p>
+        </div>
+        <div className="chapter__links contact-rail" aria-label="Contact links">
           <a
             href="https://github.com/zengzew"
             target="_blank"
@@ -156,6 +207,14 @@ export default function JourneyNarrative({
             GitHub
             <span aria-hidden="true">↗</span>
           </a>
+          <a
+            href="mailto:wzengze@163.com"
+            tabIndex={oceanIsActive ? 0 : -1}
+          >
+            Email
+            <span aria-hidden="true">↗</span>
+          </a>
+          <span className="contact-rail__location">Shanghai, China</span>
         </div>
       </section>
     </>

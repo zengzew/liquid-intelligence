@@ -13,11 +13,12 @@ interface WidthKeyframe {
 }
 
 const WIDTH_PROFILE: WidthKeyframe[] = [
-  { at: 0, halfWidth: 0.035 },
-  { at: 0.2, halfWidth: 0.26 },
+  { at: 0, halfWidth: 0.03 },
+  { at: 0.07, halfWidth: 0.16 },
+  { at: 0.2, halfWidth: 0.22 },
   { at: 0.45, halfWidth: 1.35 },
   { at: 0.7, halfWidth: 4.2 },
-  { at: 1, halfWidth: 18 },
+  { at: 1, halfWidth: 13 },
 ];
 
 function smootherStep(value: number) {
@@ -27,7 +28,7 @@ function smootherStep(value: number) {
 
 export function getRevealFrontier(progress: number) {
   const clamped = Math.min(1, Math.max(0, progress));
-  return 0.018 + Math.pow(clamped, 0.92) * 0.982;
+  return 0.024 + Math.pow(clamped, 0.82) * 0.976;
 }
 
 export function getRiverHalfWidth(progress: number) {

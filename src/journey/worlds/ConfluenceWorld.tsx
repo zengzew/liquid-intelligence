@@ -69,8 +69,8 @@ export default function ConfluenceWorld({
         crossSegments: 12,
         width: (localProgress) =>
           MathUtils.lerp(
-            2.35,
-            0.42,
+            1.32,
+            0.34,
             localProgress * localProgress * (3 - 2 * localProgress),
           ),
         elevation: (localProgress) =>
@@ -85,8 +85,8 @@ export default function ConfluenceWorld({
         crossSegments: 12,
         width: (localProgress) =>
           MathUtils.lerp(
-            2.15,
-            0.4,
+            1.2,
+            0.32,
             localProgress * localProgress * (3 - 2 * localProgress),
           ),
         elevation: (localProgress) =>
@@ -99,8 +99,8 @@ export default function ConfluenceWorld({
       const material = createLiquidRibbonMaterial({
         nightColor: "#607875",
         morningColor: "#8b9692",
-        baseAlpha: 0.46,
-        sparkle: 0.06,
+        baseAlpha: 0.28,
+        sparkle: 0.08,
         phase: 0.7,
       });
       material.depthTest = false;
@@ -113,8 +113,8 @@ export default function ConfluenceWorld({
       const material = createLiquidRibbonMaterial({
         nightColor: "#6e7d79",
         morningColor: "#9a8b75",
-        baseAlpha: 0.42,
-        sparkle: 0.05,
+        baseAlpha: 0.25,
+        sparkle: 0.07,
         phase: 3.4,
       });
       material.depthTest = false;

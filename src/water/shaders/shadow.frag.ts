@@ -2,6 +2,7 @@ const shadowFragmentShader = /* glsl */ `
   precision highp float;
 
   uniform float uReveal;
+  uniform float uProgress;
   uniform float uTheme;
   uniform float uTime;
 
@@ -36,7 +37,13 @@ const shadowFragmentShader = /* glsl */ `
       bodyMask *
       reveal *
       mix(0.018, 0.07, uTheme) *
-      smoothstep(0.04, 0.72, vLongitudinal);
+      smoothstep(0.04, 0.72, vLongitudinal) *
+      mix(
+        1.0,
+        0.04,
+        smoothstep(0.8, 0.91, uProgress) *
+          smoothstep(0.7, 0.92, vLongitudinal)
+      );
 
     if (alpha < 0.004) {
       discard;
