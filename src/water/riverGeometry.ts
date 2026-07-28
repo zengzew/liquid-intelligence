@@ -28,7 +28,10 @@ function smootherStep(value: number) {
 
 export function getRevealFrontier(progress: number) {
   const clamped = Math.min(1, Math.max(0, progress));
-  return 0.024 + Math.pow(clamped, 0.82) * 0.976;
+  const baseFrontier = 0.024 + Math.pow(clamped, 0.82) * 0.976;
+  const cameraLead = smootherStep((clamped - 0.5) / 0.2) * 0.11;
+
+  return Math.min(1, baseFrontier + cameraLead);
 }
 
 export function getRiverHalfWidth(progress: number) {

@@ -1,3 +1,5 @@
+import riverRevealFragmentFunctions from "./reveal.glsl";
+
 const shadowFragmentShader = /* glsl */ `
   precision highp float;
 
@@ -5,6 +7,8 @@ const shadowFragmentShader = /* glsl */ `
   uniform float uProgress;
   uniform float uTheme;
   uniform float uTime;
+  uniform float uFlowEnergy;
+  uniform float uFlowPhase;
 
   varying float vAcross;
   varying float vLongitudinal;
@@ -14,6 +18,8 @@ const shadowFragmentShader = /* glsl */ `
     value += dot(value, value + 45.32);
     return fract(value.x * value.y);
   }
+
+  ${riverRevealFragmentFunctions}
 
   void main() {
     float edgeDistance = 1.0 - abs(vAcross);
@@ -26,17 +32,18 @@ const shadowFragmentShader = /* glsl */ `
       0.1 + edgeNoise * 0.035,
       edgeDistance
     );
-    float reveal =
-      (1.0 - smoothstep(
-        uReveal - 0.02,
-        uReveal,
-        vLongitudinal
-      )) *
-      smoothstep(0.0, 0.004, vLongitudinal);
+    float reveal = liquidRevealMask(
+      vLongitudinal,
+      vAcross,
+      uReveal,
+      uTime,
+      uFlowPhase,
+      uFlowEnergy
+    );
     float alpha =
       bodyMask *
       reveal *
-      mix(0.018, 0.07, uTheme) *
+      mix(0.022, 0.1, uTheme) *
       smoothstep(0.04, 0.72, vLongitudinal) *
       mix(
         1.0,

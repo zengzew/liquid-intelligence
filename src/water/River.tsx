@@ -32,6 +32,7 @@ import depthFragmentShader from "./shaders/depth.frag";
 import depthVertexShader from "./shaders/depth.vert";
 import flowDetailsFragmentShader from "./shaders/flowDetails.frag";
 import reflectionFragmentShader from "./shaders/reflection.frag";
+import riverRevealFragmentFunctions from "./shaders/reveal.glsl";
 import shadowFragmentShader from "./shaders/shadow.frag";
 import skirtFragmentShader from "./shaders/skirt.frag";
 import skirtVertexShader from "./shaders/skirt.vert";
@@ -49,12 +50,12 @@ const NIGHT_BODY = new Color("#2a3437");
 const MORNING_BODY = new Color("#7f8b8d");
 const NIGHT_ATTENUATION = new Color("#080d0e");
 const MORNING_ATTENUATION = new Color("#c4cbca");
-const NIGHT_PHYSICAL_BODY = new Color("#526a72");
-const MORNING_PHYSICAL_BODY = new Color("#b7c0be");
-const NIGHT_PHYSICAL_ATTENUATION = new Color("#1b3038");
-const MORNING_PHYSICAL_ATTENUATION = new Color("#c9d1ce");
+const NIGHT_PHYSICAL_BODY = new Color("#3d555d");
+const MORNING_PHYSICAL_BODY = new Color("#71868b");
+const NIGHT_PHYSICAL_ATTENUATION = new Color("#10272f");
+const MORNING_PHYSICAL_ATTENUATION = new Color("#506b73");
 const NIGHT_PHYSICAL_SPECULAR = new Color("#dfe4e2");
-const MORNING_PHYSICAL_SPECULAR = new Color("#f1c994");
+const MORNING_PHYSICAL_SPECULAR = new Color("#edc99e");
 const NIGHT_THREE_WATER = new Color("#26353a");
 const MORNING_THREE_WATER = new Color("#889598");
 const NIGHT_THREE_SUN = new Color("#d8d9d6");
@@ -230,6 +231,11 @@ export default function River({
   const physicalShaderRef =
     useRef<WebGLProgramParametersWithUniforms | null>(null);
   const themeValue = useRef(theme === "morning" ? 1 : 0);
+  const flowMotion = useRef({
+    energy: 0,
+    phase: 0,
+    velocity: 0,
+  });
   const bodyColor = useMemo(() => new Color(), []);
   const attenuationColor = useMemo(() => new Color(), []);
   const surfaceGeometry = useMemo(() => createRiverGeometry(curve), [curve]);
@@ -266,6 +272,9 @@ export default function River({
       uTheme: { value: theme === "morning" ? 1 : 0 },
       uMotionScale: { value: reducedMotion ? 0.2 : 1 },
       uPointer: { value: new Vector2() },
+      uFlowDirection: { value: 0 },
+      uFlowEnergy: { value: 0 },
+      uFlowPhase: { value: 0 },
     }),
     [reducedMotion],
   );
@@ -291,6 +300,9 @@ export default function River({
       shader.uniforms.uTheme = uniforms.uTheme;
       shader.uniforms.uMotionScale = uniforms.uMotionScale;
       shader.uniforms.uPointer = uniforms.uPointer;
+      shader.uniforms.uFlowDirection = uniforms.uFlowDirection;
+      shader.uniforms.uFlowEnergy = uniforms.uFlowEnergy;
+      shader.uniforms.uFlowPhase = uniforms.uFlowPhase;
 
       shader.vertexShader = shader.vertexShader
         .replace(
@@ -300,6 +312,9 @@ export default function River({
           uniform float uReveal;
           uniform float uMotionScale;
           uniform vec2 uPointer;
+          uniform float uFlowDirection;
+          uniform float uFlowEnergy;
+          uniform float uFlowPhase;
           attribute float aLongitudinal;
           attribute float aAcross;
           varying float vRiverLongitudinal;
@@ -330,24 +345,42 @@ export default function River({
           vRiverAcross = aAcross;
           float downstream = smoothstep(0.05, 0.92, aLongitudinal);
           float riverNoise = riverNoise21(vec2(
-            aLongitudinal * 18.0 - uWaterTime * 0.12,
-            aAcross * 2.8 + uWaterTime * 0.015
+            aLongitudinal * 18.0 -
+              uWaterTime * 0.12 -
+              uFlowPhase * 0.34,
+            aAcross * 2.8 +
+              uWaterTime * 0.015 +
+              uFlowDirection * uFlowEnergy * 0.18
           ));
           float riverWave =
             (
               sin(
                 aLongitudinal * 83.0 -
-                uWaterTime * 0.72 +
+                uWaterTime * 0.72 -
+                uFlowPhase * 1.8 +
                 aAcross * 3.1 +
                 riverNoise * 2.0
-              ) * 0.016 +
+              ) * 0.011 +
               sin(
                 aLongitudinal * 31.0 -
                 uWaterTime * 0.38 -
+                uFlowPhase * 0.92 -
                 aAcross * 7.0
-              ) * 0.009
+              ) * 0.006
             ) *
             mix(0.18, 1.0, downstream) *
+            uMotionScale;
+          float riverImpulse =
+            sin(
+              aLongitudinal * 27.0 -
+              uWaterTime * 0.34 -
+              uFlowPhase * 2.6 +
+              aAcross * (4.0 + uFlowDirection * 1.15)
+            ) *
+            0.03 *
+            uFlowEnergy *
+            mix(0.5, 1.0, 1.0 - abs(aAcross)) *
+            downstream *
             uMotionScale;
           float pointerProgress = max(0.02, uReveal - 0.04);
           float pointerDistance = distance(
@@ -362,7 +395,7 @@ export default function River({
             exp(-pointerDistance * 22.0) *
             0.011 *
             uMotionScale;
-          transformed.y += riverWave + pointerRipple;`,
+          transformed.y += riverWave + riverImpulse + pointerRipple;`,
         );
       shader.vertexShader = shader.vertexShader.replace(
         "#include <project_vertex>",
@@ -379,6 +412,8 @@ export default function River({
           uniform float uWaterTime;
           uniform float uReveal;
           uniform float uTheme;
+          uniform float uFlowEnergy;
+          uniform float uFlowPhase;
           varying float vRiverLongitudinal;
           varying float vRiverAcross;
           varying vec3 vRiverWorldPosition;
@@ -387,7 +422,9 @@ export default function River({
             value = fract(value * vec2(123.34, 456.21));
             value += dot(value, value + 45.32);
             return fract(value.x * value.y);
-          }`,
+          }
+
+          ${riverRevealFragmentFunctions}`,
         )
         .replace(
           "#include <normal_fragment_begin>",
@@ -416,13 +453,14 @@ export default function River({
             0.06 + riverEdgeNoise * 0.032,
             riverEdgeDistance
           );
-          float riverRevealMask =
-            (1.0 - smoothstep(
-              uReveal - 0.018,
-              uReveal,
-              vRiverLongitudinal
-            )) *
-            smoothstep(0.0, 0.004, vRiverLongitudinal);
+          float riverRevealMask = liquidRevealMask(
+            vRiverLongitudinal,
+            vRiverAcross,
+            uReveal,
+            uWaterTime,
+            uFlowPhase,
+            uFlowEnergy
+          );
           float riverFlowShade =
             sin(
               vRiverLongitudinal * 48.0 -
@@ -451,24 +489,119 @@ export default function River({
       shader.uniforms.uReveal = uniforms.uReveal;
       shader.uniforms.uProgress = uniforms.uProgress;
       shader.uniforms.uTheme = uniforms.uTheme;
+      shader.uniforms.uMotionScale = uniforms.uMotionScale;
+      shader.uniforms.uPointer = uniforms.uPointer;
+      shader.uniforms.uFlowDirection = uniforms.uFlowDirection;
+      shader.uniforms.uFlowEnergy = uniforms.uFlowEnergy;
+      shader.uniforms.uFlowPhase = uniforms.uFlowPhase;
 
       shader.vertexShader = shader.vertexShader
         .replace(
           "#include <common>",
           `#include <common>
+          uniform float uWaterTime;
+          uniform float uReveal;
+          uniform float uMotionScale;
+          uniform vec2 uPointer;
+          uniform float uFlowDirection;
+          uniform float uFlowEnergy;
+          uniform float uFlowPhase;
           attribute float aLongitudinal;
           attribute float aAcross;
           varying vec2 vRiverUv;
           varying float vRiverLongitudinal;
-          varying float vRiverAcross;`,
+          varying float vRiverAcross;
+          varying vec3 vRiverWorldPosition;`,
         )
         .replace(
           "#include <begin_vertex>",
           `#include <begin_vertex>
           vRiverUv = vec2(aAcross * 0.5 + 0.5, aLongitudinal);
           vRiverLongitudinal = aLongitudinal;
-          vRiverAcross = aAcross;`,
+          vRiverAcross = aAcross;
+          float riverDownstream = smoothstep(0.12, 0.78, aLongitudinal);
+          float riverBroadSwell =
+            (
+              sin(
+                aLongitudinal * 12.8 -
+                uWaterTime * 0.16 -
+                uFlowPhase * 0.52 +
+                aAcross * 1.9
+              ) * 0.032 +
+              sin(
+                aLongitudinal * 6.1 -
+                uWaterTime * 0.065 -
+                uFlowPhase * 0.21 -
+                aAcross * 3.2
+              ) * 0.018
+            ) *
+            mix(0.42, 1.0, 1.0 - abs(aAcross));
+          float riverBankRoll =
+            sin(
+              aLongitudinal * 9.2 -
+              uWaterTime * 0.11 -
+              uFlowPhase * 0.28 +
+              0.65
+            ) *
+            aAcross *
+            0.026;
+          float riverCapillary =
+            (
+              sin(
+                aLongitudinal * 91.0 -
+                uWaterTime * 0.82 -
+                uFlowPhase * 2.3 +
+                aAcross * 4.6
+              ) * 0.009 +
+              sin(
+                aLongitudinal * 47.0 -
+                uWaterTime * 0.44 -
+                uFlowPhase * 1.4 -
+                aAcross * 8.0
+              ) * 0.006
+            ) *
+            mix(0.2, 1.0, riverDownstream);
+          float riverImpulse =
+            sin(
+              aLongitudinal * 27.0 -
+              uWaterTime * 0.34 -
+              uFlowPhase * 2.6 +
+              aAcross * (4.0 + uFlowDirection * 1.15)
+            ) *
+            0.03 *
+            uFlowEnergy *
+            mix(0.5, 1.0, 1.0 - abs(aAcross)) *
+            riverDownstream;
+          float pointerProgress = max(0.02, uReveal - 0.04);
+          float pointerDistance = distance(
+            vec2(aAcross * 0.5 + 0.5, aLongitudinal),
+            vec2(
+              0.5 + uPointer.x * 0.16,
+              pointerProgress - uPointer.y * 0.018
+            )
+          );
+          float pointerRipple =
+            sin(pointerDistance * 46.0 - uWaterTime * 1.65) *
+            exp(-pointerDistance * 22.0) *
+            0.01;
+          transformed.y +=
+            (
+              riverBroadSwell +
+              riverBankRoll +
+              riverCapillary +
+              riverImpulse +
+              pointerRipple
+            ) *
+            riverDownstream *
+            uMotionScale;`,
         );
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <project_vertex>",
+        `vRiverWorldPosition = (
+          modelMatrix * vec4(transformed, 1.0)
+        ).xyz;
+        #include <project_vertex>`,
+      );
 
       shader.fragmentShader = shader.fragmentShader
         .replace(
@@ -478,43 +611,92 @@ export default function River({
           uniform float uReveal;
           uniform float uProgress;
           uniform float uTheme;
+          uniform float uFlowDirection;
+          uniform float uFlowEnergy;
+          uniform float uFlowPhase;
           varying vec2 vRiverUv;
           varying float vRiverLongitudinal;
-          varying float vRiverAcross;`,
+          varying float vRiverAcross;
+          varying vec3 vRiverWorldPosition;
+
+          ${riverRevealFragmentFunctions}`,
+        )
+        .replace(
+          "#include <normal_fragment_begin>",
+          `#include <normal_fragment_begin>
+          vec3 riverSurfaceNormal = normalize(cross(
+            dFdx(vRiverWorldPosition),
+            dFdy(vRiverWorldPosition)
+          ));
+          if (!gl_FrontFacing) {
+            riverSurfaceNormal *= -1.0;
+          }
+          normal = normalize(
+            mat3(viewMatrix) * riverSurfaceNormal
+          );`,
         )
         .replace(
           "#include <roughnessmap_fragment>",
           `#include <roughnessmap_fragment>
           #ifdef USE_NORMALMAP_TANGENTSPACE
+            float riverChannelCore =
+              1.0 - smoothstep(0.18, 0.96, abs(vRiverAcross));
+            float riverShearSpeed = mix(0.68, 1.16, riverChannelCore);
             vec2 riverFlowUvA = vec2(
               vRiverUv.x * 1.8 +
                 vRiverUv.y * 1.15 +
-                uWaterTime * 0.006,
+                uWaterTime * 0.006 +
+                uFlowDirection *
+                  uFlowEnergy *
+                  mix(0.065, 0.025, riverChannelCore),
               vRiverUv.y * 10.8 +
                 vRiverUv.x * 1.65 -
-                uWaterTime * 0.021
+                uWaterTime * (0.021 + uFlowEnergy * 0.018) -
+                uFlowPhase * 0.36 * riverShearSpeed
             );
             vec2 riverFlowUvB = vec2(
               vRiverUv.x * 3.1 -
                 vRiverUv.y * 0.86 -
                 uWaterTime * 0.004 +
+                uFlowDirection *
+                  uFlowEnergy *
+                  mix(0.082, 0.034, riverChannelCore) +
                 0.41,
               vRiverUv.y * 17.2 -
                 vRiverUv.x * 2.2 -
-                uWaterTime * 0.013 +
+                uWaterTime * (0.013 + uFlowEnergy * 0.011) -
+                uFlowPhase * 0.24 * riverShearSpeed +
                 0.23
             );
             vec3 riverNormalA =
               texture2D(normalMap, riverFlowUvA).xyz * 2.0 - 1.0;
             vec3 riverNormalB =
               texture2D(normalMap, riverFlowUvB).xyz * 2.0 - 1.0;
+            vec2 riverFlowUvC = vec2(
+              vRiverUv.x * 5.2 +
+                vRiverUv.y * 1.9 +
+                uWaterTime * 0.009 +
+                0.29,
+              vRiverUv.y * 28.0 -
+                vRiverUv.x * 3.4 -
+                uWaterTime * (0.028 + uFlowEnergy * 0.022) -
+                uFlowPhase * 0.48 * riverShearSpeed +
+                0.61
+            );
+            vec3 riverNormalC =
+              texture2D(normalMap, riverFlowUvC).xyz * 2.0 - 1.0;
             vec2 riverBreakUvA = vec2(
               vRiverUv.x * 0.92 + riverNormalB.x * 0.18 + 0.17,
-              vRiverUv.y * 5.6 - uWaterTime * 0.011 + riverNormalA.y * 0.08
+              vRiverUv.y * 5.6 -
+                uWaterTime * 0.011 -
+                uFlowPhase * 0.15 * riverShearSpeed +
+                riverNormalA.y * 0.08
             );
             vec2 riverBreakUvB = vec2(
               vRiverUv.x * 2.15 + vRiverUv.y * 0.73 + 0.53,
-              vRiverUv.y * 7.8 - uWaterTime * 0.016
+              vRiverUv.y * 7.8 -
+                uWaterTime * 0.016 -
+                uFlowPhase * 0.21 * riverShearSpeed
             );
             float riverBreakA = texture2D(normalMap, riverBreakUvA).r;
             float riverBreakB = texture2D(normalMap, riverBreakUvB).g;
@@ -536,14 +718,17 @@ export default function River({
               riverCenterBand *
               smoothstep(0.48, 0.7, riverBreakup);
             float riverRoughnessNoise =
-              riverNormalA.z * 0.58 + riverNormalB.z * 0.42;
+              riverNormalA.z * 0.46 +
+              riverNormalB.z * 0.34 +
+              riverNormalC.z * 0.2;
             roughnessFactor = clamp(
               roughnessFactor +
                 (0.96 - riverRoughnessNoise) * 0.16 +
                 (riverBreakup - 0.5) * 0.065 +
-                riverCenterBreak * 0.09,
-              0.085,
-              0.26
+                riverCenterBreak * 0.09 +
+                uFlowEnergy * 0.018,
+              0.11,
+              0.3
             );
           #endif`,
         )
@@ -552,10 +737,12 @@ export default function River({
           `#include <normal_fragment_maps>
           #ifdef USE_NORMALMAP_TANGENTSPACE
             vec2 riverFlowNormal =
-              riverNormalA.xy * 0.34 +
-              riverNormalB.yx * 0.22 +
-              vec2(riverBreakA - 0.5, riverBreakB - 0.5) * 0.14;
-            vec3 riverMapNormal = normalize(vec3(riverFlowNormal, 1.0));
+              riverNormalA.xy * 0.3 +
+              riverNormalB.yx * 0.24 +
+              riverNormalC.xy * 0.16 +
+              vec2(riverBreakA - 0.5, riverBreakB - 0.5) * 0.16;
+            riverFlowNormal *= 1.0 + uFlowEnergy * 0.34;
+            vec3 riverMapNormal = normalize(vec3(riverFlowNormal, 0.94));
             normal = normalize(tbn * riverMapNormal);
           #endif`,
         )
@@ -575,13 +762,14 @@ export default function River({
             0.066 + riverEdgeTexture * 0.027,
             riverEdgeDistance
           );
-          float riverRevealMask =
-            (1.0 - smoothstep(
-              uReveal - 0.02,
-              uReveal,
-              vRiverLongitudinal
-            )) *
-            smoothstep(0.0, 0.004, vRiverLongitudinal);
+          float riverRevealMask = liquidRevealMask(
+            vRiverLongitudinal,
+            vRiverAcross,
+            uReveal,
+            uWaterTime,
+            uFlowPhase,
+            uFlowEnergy
+          );
           float riverOceanBlend =
             smoothstep(0.8, 0.91, uProgress) *
             smoothstep(0.7, 0.92, vRiverLongitudinal);
@@ -594,7 +782,7 @@ export default function River({
           ).g;
           diffuseColor.rgb *=
             1.0 +
-            (riverMottle - 0.5) * mix(0.075, 0.055, uTheme);
+            (riverMottle - 0.5) * mix(0.11, 0.085, uTheme);
           diffuseColor.a *=
             riverEdgeMask *
             riverRevealMask *
@@ -613,7 +801,8 @@ export default function River({
                 vRiverLongitudinal * 73.0 +
                 vRiverAcross * 18.0 +
                 riverBreakB * 11.0 -
-                uWaterTime * 0.19
+                uWaterTime * 0.19 -
+                uFlowPhase * 1.35
               ) *
               0.5 +
               0.5;
@@ -628,7 +817,8 @@ export default function River({
             float riverReflectionMask =
               riverReflectionBreak *
               riverReflectionEdge *
-              (0.24 + riverFresnel * 0.76);
+              (0.24 + riverFresnel * 0.76) *
+              (1.0 + uFlowEnergy * 0.22);
             vec3 riverNightReflection = vec3(0.62, 0.68, 0.69);
             vec3 riverMorningReflection = vec3(0.64, 0.46, 0.27);
             outgoingLight +=
@@ -707,7 +897,7 @@ export default function River({
       return;
     }
 
-    material.customProgramCacheKey = () => "liquid-water-body-v1-1";
+    material.customProgramCacheKey = () => "liquid-water-body-v1-2";
     material.needsUpdate = true;
   }, [materialVariant]);
 
@@ -718,12 +908,36 @@ export default function River({
       return;
     }
 
-    material.customProgramCacheKey = () => "liquid-physical-water-v11";
+    material.customProgramCacheKey = () => "liquid-physical-water-v14";
     material.needsUpdate = true;
   }, [materialVariant]);
 
   useFrame(({ clock, pointer }, delta) => {
     const progress = progressRef.current.current;
+    const motion = flowMotion.current;
+    const rawVelocity = reducedMotion
+      ? 0
+      : MathUtils.clamp(progressRef.current.velocity, -2.4, 2.4);
+    const isAccelerating =
+      Math.abs(rawVelocity) > Math.abs(motion.velocity) ||
+      Math.sign(rawVelocity) !== Math.sign(motion.velocity);
+    motion.velocity = MathUtils.damp(
+      motion.velocity,
+      rawVelocity,
+      isAccelerating ? 11 : 2.1,
+      delta,
+    );
+    const energyTarget = reducedMotion
+      ? 0
+      : MathUtils.clamp(Math.abs(motion.velocity) * 0.78, 0, 1);
+    motion.energy = MathUtils.damp(
+      motion.energy,
+      energyTarget,
+      energyTarget > motion.energy ? 8 : 1.65,
+      delta,
+    );
+    motion.phase += motion.velocity * delta * 1.15;
+
     const themeTarget = theme === "morning" ? 1 : 0;
     themeValue.current = MathUtils.damp(
       themeValue.current,
@@ -737,6 +951,20 @@ export default function River({
     uniforms.uReveal.value = getRevealFrontier(progress);
     uniforms.uTheme.value = themeValue.current;
     uniforms.uPointer.value.lerp(pointer, 1 - Math.exp(-delta * 2.8));
+    uniforms.uFlowDirection.value = MathUtils.clamp(
+      motion.velocity / 2.4,
+      -1,
+      1,
+    );
+    uniforms.uFlowEnergy.value = motion.energy;
+    uniforms.uFlowPhase.value = motion.phase;
+
+    Reflect.set(window, "__LIQUID_MOTION__", {
+      direction: uniforms.uFlowDirection.value,
+      energy: motion.energy,
+      phase: motion.phase,
+      velocity: motion.velocity,
+    });
 
     const layerMaterials = [
       depthMaterialRef.current,
@@ -758,6 +986,10 @@ export default function River({
       layerMaterial.uniforms.uTheme.value = themeValue.current;
       layerMaterial.uniforms.uMotionScale.value = uniforms.uMotionScale.value;
       layerMaterial.uniforms.uPointer.value.copy(uniforms.uPointer.value);
+      layerMaterial.uniforms.uFlowDirection.value =
+        uniforms.uFlowDirection.value;
+      layerMaterial.uniforms.uFlowEnergy.value = uniforms.uFlowEnergy.value;
+      layerMaterial.uniforms.uFlowPhase.value = uniforms.uFlowPhase.value;
     });
 
     if (nightReflectionMaterialRef.current) {
@@ -804,14 +1036,14 @@ export default function River({
       physicalMaterial.specularColor
         .copy(NIGHT_PHYSICAL_SPECULAR)
         .lerp(MORNING_PHYSICAL_SPECULAR, mix);
-      physicalMaterial.opacity = MathUtils.lerp(0.78, 0.42, mix);
-      physicalMaterial.roughness = MathUtils.lerp(0.13, 0.17, mix);
-      physicalMaterial.transmission = MathUtils.lerp(0.2, 0.52, mix);
-      physicalMaterial.thickness = MathUtils.lerp(0.2, 0.18, mix);
-      physicalMaterial.envMapIntensity = MathUtils.lerp(1.82, 1.42, mix);
-      physicalMaterial.clearcoat = MathUtils.lerp(0.7, 0.62, mix);
-      physicalMaterial.clearcoatRoughness = MathUtils.lerp(0.15, 0.17, mix);
-      physicalMaterial.specularIntensity = MathUtils.lerp(0.92, 0.84, mix);
+      physicalMaterial.opacity = MathUtils.lerp(0.66, 0.6, mix);
+      physicalMaterial.roughness = MathUtils.lerp(0.18, 0.23, mix);
+      physicalMaterial.transmission = MathUtils.lerp(0.42, 0.5, mix);
+      physicalMaterial.thickness = MathUtils.lerp(0.28, 0.24, mix);
+      physicalMaterial.envMapIntensity = MathUtils.lerp(1.34, 1.18, mix);
+      physicalMaterial.clearcoat = MathUtils.lerp(0.82, 0.76, mix);
+      physicalMaterial.clearcoatRoughness = MathUtils.lerp(0.15, 0.19, mix);
+      physicalMaterial.specularIntensity = MathUtils.lerp(0.76, 0.68, mix);
     }
 
     if (threeWater) {

@@ -1,3 +1,5 @@
+import riverRevealFragmentFunctions from "./reveal.glsl";
+
 const reflectionFragmentShader = /* glsl */ `
   precision highp float;
 
@@ -6,6 +8,9 @@ const reflectionFragmentShader = /* glsl */ `
   uniform float uProgress;
   uniform float uTheme;
   uniform float uReflectionMode;
+  uniform float uFlowDirection;
+  uniform float uFlowEnergy;
+  uniform float uFlowPhase;
 
   varying vec3 vWorldPosition;
   varying float vAcross;
@@ -44,14 +49,17 @@ const reflectionFragmentShader = /* glsl */ `
     return result;
   }
 
+  ${riverRevealFragmentFunctions}
+
   float revealMask() {
-    return
-      (1.0 - smoothstep(
-        uReveal - 0.018,
-        uReveal,
-        vLongitudinal
-      )) *
-      smoothstep(0.0, 0.004, vLongitudinal);
+    return liquidRevealMask(
+      vLongitudinal,
+      vAcross,
+      uReveal,
+      uTime,
+      uFlowPhase,
+      uFlowEnergy
+    );
   }
 
   void main() {
@@ -69,13 +77,32 @@ const reflectionFragmentShader = /* glsl */ `
       1.72
     );
 
+    float channelCore =
+      1.0 - smoothstep(0.18, 0.96, abs(vAcross));
+    float shearSpeed = mix(0.68, 1.16, channelCore);
+    float advectedPhase = uFlowPhase * shearSpeed;
     float downstreamNoise = fbm(vec2(
-      vLongitudinal * 7.5 - uTime * 0.055,
-      vAcross * 1.55 + uTime * 0.006
+      vLongitudinal * 7.5 -
+        uTime * 0.055 -
+        advectedPhase * 0.18,
+      vAcross * 1.55 +
+        uTime * 0.006 +
+        uFlowDirection *
+          uFlowEnergy *
+          mix(0.15, 0.055, channelCore)
     ));
     float slowWarp =
-      sin(vLongitudinal * 11.0 - uTime * 0.075) * 0.045 +
-      (downstreamNoise - 0.5) * 0.22;
+      sin(
+        vLongitudinal * 11.0 -
+        uTime * 0.075 -
+        advectedPhase * 0.24
+      ) * 0.045 +
+      (downstreamNoise - 0.5) * 0.22 +
+      sign(vAcross) *
+        (1.0 - channelCore) *
+        uFlowDirection *
+        uFlowEnergy *
+        0.035;
     float streamCoordinate = vAcross + slowWarp;
 
     float softBand =
@@ -89,7 +116,12 @@ const reflectionFragmentShader = /* glsl */ `
     float broadPatch = smoothstep(
       0.32,
       0.68,
-      fbm(vec2(vLongitudinal * 6.2 - uTime * 0.06, vAcross * 1.3))
+      fbm(vec2(
+        vLongitudinal * 6.2 -
+          uTime * 0.06 -
+          advectedPhase * 0.2,
+        vAcross * 1.3
+      ))
     );
     float lineBreak = smoothstep(
       0.5,
@@ -105,6 +137,26 @@ const reflectionFragmentShader = /* glsl */ `
       noise21(vec2(
         vLongitudinal * 43.0 - uTime * 0.16,
         streamCoordinate * 6.7 + 0.31
+      ))
+    );
+    float mesoBreak = smoothstep(
+      0.44,
+      0.7,
+      fbm(vec2(
+        vLongitudinal * 15.0 -
+          uTime * 0.105 -
+          advectedPhase * 0.48,
+        streamCoordinate * 4.4
+      ))
+    );
+    float crestBreak = smoothstep(
+      0.55,
+      0.79,
+      noise21(vec2(
+        vLongitudinal * 68.0 -
+          uTime * 0.21 -
+          advectedPhase * 0.92,
+        streamCoordinate * 8.6 + 0.27
       ))
     );
 
@@ -123,9 +175,9 @@ const reflectionFragmentShader = /* glsl */ `
       smoothstep(0.62, 0.86, edgeNoise);
 
     float bands =
-      softBand * (0.12 + broadPatch * 0.3) +
-      sideBand * (0.08 + broadPatch * 0.18) +
-      narrowBand * lineBreak * 0.24;
+      softBand * broadPatch * mesoBreak * 0.36 +
+      sideBand * broadPatch * lineBreak * 0.2 +
+      narrowBand * lineBreak * crestBreak * 0.22;
     float glassThread = pow(
       0.5 +
         0.5 *
@@ -151,7 +203,8 @@ const reflectionFragmentShader = /* glsl */ `
         0.5 *
           sin(
             vLongitudinal * 276.0 -
-            uTime * 0.58 +
+            uTime * 0.58 -
+            advectedPhase * 2.4 +
             downstreamNoise * 8.0 +
             streamCoordinate * 3.0
           ),
@@ -161,7 +214,9 @@ const reflectionFragmentShader = /* glsl */ `
       0.5,
       0.72,
       noise21(vec2(
-        vLongitudinal * 25.0 - uTime * 0.11,
+        vLongitudinal * 25.0 -
+          uTime * 0.11 -
+          advectedPhase * 0.42,
         vAcross * 2.4
       ))
     );
@@ -169,7 +224,9 @@ const reflectionFragmentShader = /* glsl */ `
       0.46,
       0.69,
       fbm(vec2(
-        vLongitudinal * 34.0 - uTime * 0.1,
+        vLongitudinal * 34.0 -
+          uTime * 0.1 -
+          advectedPhase * 0.54,
         vAcross * 5.8 + uTime * 0.008
       ))
     );
@@ -178,20 +235,45 @@ const reflectionFragmentShader = /* glsl */ `
       rippleBreak *
       mix(0.08, 1.0, transverseBreak) *
       (0.12 + softBand * 0.46 + sideBand * 0.2);
+    float capillaryGlints =
+      pow(
+        0.5 +
+          0.5 *
+            sin(
+              vLongitudinal * 194.0 -
+              uTime * 0.71 -
+              advectedPhase * 3.1 -
+              streamCoordinate * 21.0 +
+              downstreamNoise * 9.0
+            ),
+        18.0
+      ) *
+      crestBreak *
+      rippleBreak *
+      (0.14 + channelCore * 0.56) *
+      (0.22 + mesoBreak * 0.78);
     float reflection =
       bands * mix(0.5, 0.32, uTheme) +
       glassThread *
         lineBreak *
         threadBreak *
+        mesoBreak *
         mix(0.48, 0.28, uTheme) +
       secondaryThread *
         broadPatch *
         threadBreak *
+        crestBreak *
         mix(0.24, 0.15, uTheme) +
-      brokenRipples * mix(0.84, 0.48, uTheme) +
+      brokenRipples * mix(0.92, 0.58, uTheme) +
+      capillaryGlints * mix(0.62, 0.36, uTheme) +
       edgeSheen * mix(0.14, 0.095, uTheme);
-    reflection *= mix(0.58, 1.2, fresnel);
-    reflection += abs(vWave) * mix(0.9, 0.5, uTheme);
+    reflection *=
+      mix(0.58, 1.2, fresnel) *
+      (1.0 + uFlowEnergy * 0.18);
+    reflection +=
+      abs(vWave) *
+      mix(0.58, 0.34, uTheme) *
+      (0.18 + mesoBreak * 0.82);
     reflection *= mix(1.45, 1.08, uTheme);
 
     float baseSheen =

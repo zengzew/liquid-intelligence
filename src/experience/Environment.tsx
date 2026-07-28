@@ -11,8 +11,6 @@ import {
   FogExp2,
   HemisphereLight,
   MathUtils,
-  Mesh,
-  MeshStandardMaterial,
 } from "three";
 import type { ExperienceTheme } from "../App";
 import type { JourneyProgress } from "./LiquidExperience";
@@ -24,14 +22,12 @@ interface EnvironmentProps {
 
 const NIGHT_BACKGROUND = new Color("#020303");
 const MORNING_BACKGROUND = new Color("#f5f2ec");
-const NIGHT_GROUND = new Color("#020303");
-const MORNING_GROUND = new Color("#f1eee8");
 const NIGHT_SKY = new Color("#65696b");
 const MORNING_SKY = new Color("#fff8ea");
 const NIGHT_GROUND_LIGHT = new Color("#010202");
 const MORNING_GROUND_LIGHT = new Color("#a8afb0");
 const NIGHT_KEY_LIGHT = new Color("#d5d6d2");
-const MORNING_KEY_LIGHT = new Color("#ffe9c7");
+const MORNING_KEY_LIGHT = new Color("#ead7ba");
 
 function SoftboxEnvironment({ theme }: { theme: ExperienceTheme }) {
   const morning = theme === "morning";
@@ -42,11 +38,11 @@ function SoftboxEnvironment({ theme }: { theme: ExperienceTheme }) {
       frames={2}
       environmentIntensity={morning ? 0.96 : 1.08}
     >
-      <color attach="background" args={[morning ? "#d8d2c8" : "#050606"]} />
+      <color attach="background" args={[morning ? "#aeb9ba" : "#050606"]} />
       <Lightformer
         form="rect"
         color={morning ? "#ffd6a0" : "#e3e7e5"}
-        intensity={morning ? 2.45 : 2.75}
+        intensity={morning ? 2.2 : 2.75}
         position={[0.8, 9, 27]}
         scale={[1.05, 38]}
         target={[0.2, 0, -28]}
@@ -54,7 +50,7 @@ function SoftboxEnvironment({ theme }: { theme: ExperienceTheme }) {
       <Lightformer
         form="rect"
         color={morning ? "#aeb9ba" : "#aeb7b8"}
-        intensity={morning ? 0.9 : 0.52}
+        intensity={morning ? 0.72 : 0.52}
         position={[-12, 6.5, 12]}
         scale={[2.4, 18]}
         target={[-2.5, 0, -35]}
@@ -68,7 +64,6 @@ export default function Environment({
   progressRef,
 }: EnvironmentProps) {
   const { scene } = useThree();
-  const floorRef = useRef<Mesh>(null);
   const hemisphereRef = useRef<HemisphereLight>(null);
   const keyLightRef = useRef<DirectionalLight>(null);
   const themeValue = useRef(theme === "morning" ? 1 : 0);
@@ -78,7 +73,7 @@ export default function Environment({
     const background = (
       theme === "morning" ? MORNING_BACKGROUND : NIGHT_BACKGROUND
     ).clone();
-    const fog = new FogExp2(background, theme === "morning" ? 0.01 : 0.014);
+    const fog = new FogExp2(background, theme === "morning" ? 0.0065 : 0.013);
 
     scene.background = background;
     scene.fog = fog;
@@ -107,27 +102,20 @@ export default function Environment({
     if (scene.fog instanceof FogExp2) {
       scene.fog.color.copy(targetColor);
       scene.fog.density =
-        MathUtils.lerp(0.014, 0.01, mix) *
-        MathUtils.lerp(1, 0.78, progress);
+        MathUtils.lerp(0.013, 0.0065, mix) *
+        MathUtils.lerp(1, 0.82, progress);
     }
 
     scene.environmentIntensity =
-      MathUtils.lerp(1.08, 0.92, mix) *
+      MathUtils.lerp(1.08, 1.0, mix) *
       MathUtils.lerp(0.94, 1.08, progress);
-
-    const floorMaterial = floorRef.current?.material;
-
-    if (floorMaterial instanceof MeshStandardMaterial) {
-      floorMaterial.color.copy(NIGHT_GROUND).lerp(MORNING_GROUND, mix);
-      floorMaterial.roughness = MathUtils.lerp(0.99, 0.94, mix);
-    }
 
     if (hemisphereRef.current) {
       hemisphereRef.current.color.copy(NIGHT_SKY).lerp(MORNING_SKY, mix);
       hemisphereRef.current.groundColor
         .copy(NIGHT_GROUND_LIGHT)
         .lerp(MORNING_GROUND_LIGHT, mix);
-      hemisphereRef.current.intensity = MathUtils.lerp(0.18, 0.88, mix);
+      hemisphereRef.current.intensity = MathUtils.lerp(0.2, 0.72, mix);
     }
 
     if (keyLightRef.current) {
@@ -135,7 +123,7 @@ export default function Environment({
         .copy(NIGHT_KEY_LIGHT)
         .lerp(MORNING_KEY_LIGHT, mix);
       keyLightRef.current.intensity =
-        MathUtils.lerp(1.15, 1.85, mix) *
+        MathUtils.lerp(1.18, 1.58, mix) *
         MathUtils.lerp(0.96, 1.08, progress);
     }
   });
@@ -151,15 +139,6 @@ export default function Environment({
         intensity={1.15}
         position={[-8, 14, 5]}
       />
-
-      <mesh
-        ref={floorRef}
-        position={[0, -2.8, -48]}
-        rotation={[-Math.PI / 2, 0, 0]}
-      >
-        <planeGeometry args={[260, 420, 1, 1]} />
-        <meshStandardMaterial color="#020303" roughness={0.99} metalness={0} />
-      </mesh>
     </>
   );
 }

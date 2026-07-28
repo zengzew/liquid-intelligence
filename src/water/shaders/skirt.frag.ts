@@ -1,24 +1,32 @@
+import riverRevealFragmentFunctions from "./reveal.glsl";
+
 const skirtFragmentShader = /* glsl */ `
   precision highp float;
 
   uniform float uReveal;
   uniform float uProgress;
   uniform float uTheme;
+  uniform float uTime;
+  uniform float uFlowEnergy;
+  uniform float uFlowPhase;
 
   varying vec2 vSkirtUv;
   varying float vLongitudinal;
 
+  ${riverRevealFragmentFunctions}
+
   void main() {
-    float reveal =
-      (1.0 - smoothstep(
-        uReveal - 0.018,
-        uReveal,
-        vLongitudinal
-      )) *
-      smoothstep(0.0, 0.004, vLongitudinal);
+    float reveal = liquidRevealMask(
+      vLongitudinal,
+      1.0,
+      uReveal,
+      uTime,
+      uFlowPhase,
+      uFlowEnergy
+    );
     float depthGradient = mix(0.72, 0.18, vSkirtUv.x);
     vec3 nightDeep = vec3(0.018, 0.021, 0.022);
-    vec3 morningDeep = vec3(0.35, 0.39, 0.4);
+    vec3 morningDeep = vec3(0.25, 0.32, 0.34);
     vec3 color = mix(nightDeep, morningDeep, uTheme);
     float oceanBlend =
       smoothstep(0.8, 0.91, uProgress) *
@@ -26,7 +34,7 @@ const skirtFragmentShader = /* glsl */ `
     float alpha =
       reveal *
       depthGradient *
-      mix(0.54, 0.28, uTheme) *
+      mix(0.58, 0.44, uTheme) *
       mix(1.0, 0.06, oceanBlend);
 
     if (alpha < 0.008) {

@@ -1,3 +1,5 @@
+import riverRevealFragmentFunctions from "./reveal.glsl";
+
 const flowDetailsFragmentShader = /* glsl */ `
   precision highp float;
 
@@ -5,6 +7,9 @@ const flowDetailsFragmentShader = /* glsl */ `
   uniform float uReveal;
   uniform float uProgress;
   uniform float uTheme;
+  uniform float uFlowDirection;
+  uniform float uFlowEnergy;
+  uniform float uFlowPhase;
 
   varying float vAcross;
   varying float vLongitudinal;
@@ -41,14 +46,35 @@ const flowDetailsFragmentShader = /* glsl */ `
     return result;
   }
 
+  ${riverRevealFragmentFunctions}
+
   void main() {
+    float channelCore =
+      1.0 - smoothstep(0.18, 0.96, abs(vAcross));
+    float shearSpeed = mix(0.68, 1.16, channelCore);
+    float advectedPhase = uFlowPhase * shearSpeed;
     float movingNoise = fbm(vec2(
-      vLongitudinal * 12.0 - uTime * 0.1,
-      vAcross * 2.1 + uTime * 0.008
+      vLongitudinal * 12.0 -
+        uTime * 0.1 -
+        advectedPhase * 0.3,
+      vAcross * 2.1 +
+        uTime * 0.008 +
+        uFlowDirection *
+          uFlowEnergy *
+          mix(0.2, 0.08, channelCore)
     ));
     float drift =
-      sin(vLongitudinal * 16.0 - uTime * 0.14) * 0.055 +
-      (movingNoise - 0.5) * 0.25;
+      sin(
+        vLongitudinal * 16.0 -
+        uTime * 0.14 -
+        advectedPhase * 0.45
+      ) * 0.055 +
+      (movingNoise - 0.5) * 0.25 +
+      sign(vAcross) *
+        (1.0 - channelCore) *
+        uFlowDirection *
+        uFlowEnergy *
+        0.04;
     float streamCoordinate = vAcross + drift;
     float mainFilaments = pow(
       0.5 +
@@ -71,7 +97,9 @@ const flowDetailsFragmentShader = /* glsl */ `
       32.0
     );
     float segmentNoise = fbm(vec2(
-      vLongitudinal * 29.0 - uTime * 0.2,
+      vLongitudinal * 29.0 -
+        uTime * 0.2 -
+        advectedPhase * 0.72,
       streamCoordinate * 3.1
     ));
     float broken = smoothstep(0.47, 0.68, segmentNoise);
@@ -79,7 +107,9 @@ const flowDetailsFragmentShader = /* glsl */ `
       0.55,
       0.74,
       noise21(vec2(
-        vLongitudinal * 21.0 - uTime * 0.13,
+        vLongitudinal * 21.0 -
+          uTime * 0.13 -
+          advectedPhase * 0.52,
         streamCoordinate * 4.7
       ))
     );
@@ -87,7 +117,9 @@ const flowDetailsFragmentShader = /* glsl */ `
       0.58,
       0.8,
       noise21(vec2(
-        vLongitudinal * 47.0 - uTime * 0.18,
+        vLongitudinal * 47.0 -
+          uTime * 0.18 -
+          advectedPhase * 0.84,
         streamCoordinate * 7.1
       ))
     );
@@ -95,28 +127,36 @@ const flowDetailsFragmentShader = /* glsl */ `
       0.56,
       0.78,
       noise21(vec2(
-        vLongitudinal * 61.0 + uTime * 0.11,
+        vLongitudinal * 61.0 +
+          uTime * 0.11 +
+          advectedPhase * 0.35,
         streamCoordinate * 9.3 + 0.37
       ))
     );
     float softCurrent =
-      exp(-pow((streamCoordinate - 0.16) / 0.14, 2.0)) *
+      exp(-pow((streamCoordinate - 0.16) / 0.24, 2.0)) *
       smoothstep(
-        0.42,
-        0.7,
+        0.36,
+        0.64,
         fbm(vec2(
-          vLongitudinal * 8.0 - uTime * 0.065,
-          streamCoordinate * 1.7
+          vLongitudinal * 6.4 -
+            uTime * 0.052 -
+            advectedPhase * 0.18,
+          streamCoordinate * 1.35
         ))
       );
     float downstream = smoothstep(0.04, 0.48, vLongitudinal);
     float currents =
       (
-        mainFilaments * broken * longitudinalBreak * 0.82 +
-        fineFilaments * secondaryBreak * fineBreak * 0.52 +
-        softCurrent * longitudinalBreak * 0.18
+        mainFilaments * broken * longitudinalBreak * 0.5 +
+        fineFilaments * secondaryBreak * fineBreak * 0.26 +
+        softCurrent *
+          longitudinalBreak *
+          secondaryBreak *
+          0.34
       ) *
-      mix(0.32, 1.0, downstream);
+      mix(0.32, 1.0, downstream) *
+      (1.0 + uFlowEnergy * 0.3);
 
     float edgeDistance = 1.0 - abs(vAcross);
     float edgeBreakup =
@@ -126,16 +166,17 @@ const flowDetailsFragmentShader = /* glsl */ `
         0.86,
         noise21(vec2(vLongitudinal * 45.0 - uTime * 0.12, vAcross * 5.0))
       );
-    float reveal =
-      (1.0 - smoothstep(
-        uReveal - 0.018,
-        uReveal,
-        vLongitudinal
-      )) *
-      smoothstep(0.0, 0.005, vLongitudinal);
+    float reveal = liquidRevealMask(
+      vLongitudinal,
+      vAcross,
+      uReveal,
+      uTime,
+      uFlowPhase,
+      uFlowEnergy
+    );
     float alpha =
-      (currents * mix(0.36, 0.22, uTheme) +
-        edgeBreakup * mix(0.14, 0.095, uTheme)) *
+      (currents * mix(0.29, 0.23, uTheme) +
+        edgeBreakup * mix(0.14, 0.12, uTheme)) *
       reveal;
     float oceanBlend =
       smoothstep(0.8, 0.91, uProgress) *
