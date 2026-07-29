@@ -36,7 +36,7 @@ const shadowFragmentShader = /* glsl */ `
     float alpha =
       bodyMask *
       reveal *
-      mix(0.018, 0.07, uTheme) *
+      mix(0.022, 0.1, uTheme) *
       smoothstep(0.04, 0.72, vLongitudinal) *
       mix(
         1.0,

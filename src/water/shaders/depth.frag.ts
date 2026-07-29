@@ -49,10 +49,10 @@ const depthFragmentShader = /* glsl */ `
     ));
     float depthShade = smoothstep(0.04, 0.3, vDepth);
 
-    vec3 nightShallow = vec3(0.125, 0.151, 0.16);
-    vec3 nightDeep = vec3(0.042, 0.058, 0.065);
-    vec3 morningShallow = vec3(0.84, 0.86, 0.85);
-    vec3 morningDeep = vec3(0.72, 0.77, 0.77);
+    vec3 nightShallow = vec3(0.15, 0.18, 0.19);
+    vec3 nightDeep = vec3(0.05, 0.072, 0.08);
+    vec3 morningShallow = vec3(0.66, 0.71, 0.71);
+    vec3 morningDeep = vec3(0.43, 0.52, 0.54);
     vec3 nightColor = mix(nightShallow, nightDeep, depthShade);
     vec3 morningColor = mix(morningShallow, morningDeep, depthShade);
     float oceanBlend =
@@ -74,7 +74,7 @@ const depthFragmentShader = /* glsl */ `
     color *= mix(0.82, 1.0, edge);
     float alpha =
       reveal *
-      mix(0.72, 0.48, uTheme) *
+      mix(0.76, 0.64, uTheme) *
       mix(1.0, 0.025, oceanBlend);
     if (alpha < 0.008) {
       discard;

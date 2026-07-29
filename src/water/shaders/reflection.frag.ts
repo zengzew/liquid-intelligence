@@ -6,6 +6,9 @@ const reflectionFragmentShader = /* glsl */ `
   uniform float uProgress;
   uniform float uTheme;
   uniform float uReflectionMode;
+  uniform float uFlowDirection;
+  uniform float uFlowEnergy;
+  uniform float uFlowPhase;
 
   varying vec3 vWorldPosition;
   varying float vAcross;
@@ -70,11 +73,19 @@ const reflectionFragmentShader = /* glsl */ `
     );
 
     float downstreamNoise = fbm(vec2(
-      vLongitudinal * 7.5 - uTime * 0.055,
-      vAcross * 1.55 + uTime * 0.006
+      vLongitudinal * 7.5 -
+        uTime * 0.055 -
+        uFlowPhase * 0.18,
+      vAcross * 1.55 +
+        uTime * 0.006 +
+        uFlowDirection * uFlowEnergy * 0.12
     ));
     float slowWarp =
-      sin(vLongitudinal * 11.0 - uTime * 0.075) * 0.045 +
+      sin(
+        vLongitudinal * 11.0 -
+        uTime * 0.075 -
+        uFlowPhase * 0.24
+      ) * 0.045 +
       (downstreamNoise - 0.5) * 0.22;
     float streamCoordinate = vAcross + slowWarp;
 
@@ -89,7 +100,12 @@ const reflectionFragmentShader = /* glsl */ `
     float broadPatch = smoothstep(
       0.32,
       0.68,
-      fbm(vec2(vLongitudinal * 6.2 - uTime * 0.06, vAcross * 1.3))
+      fbm(vec2(
+        vLongitudinal * 6.2 -
+          uTime * 0.06 -
+          uFlowPhase * 0.2,
+        vAcross * 1.3
+      ))
     );
     float lineBreak = smoothstep(
       0.5,
@@ -151,7 +167,8 @@ const reflectionFragmentShader = /* glsl */ `
         0.5 *
           sin(
             vLongitudinal * 276.0 -
-            uTime * 0.58 +
+            uTime * 0.58 -
+            uFlowPhase * 2.4 +
             downstreamNoise * 8.0 +
             streamCoordinate * 3.0
           ),
@@ -161,7 +178,9 @@ const reflectionFragmentShader = /* glsl */ `
       0.5,
       0.72,
       noise21(vec2(
-        vLongitudinal * 25.0 - uTime * 0.11,
+        vLongitudinal * 25.0 -
+          uTime * 0.11 -
+          uFlowPhase * 0.42,
         vAcross * 2.4
       ))
     );
@@ -169,7 +188,9 @@ const reflectionFragmentShader = /* glsl */ `
       0.46,
       0.69,
       fbm(vec2(
-        vLongitudinal * 34.0 - uTime * 0.1,
+        vLongitudinal * 34.0 -
+          uTime * 0.1 -
+          uFlowPhase * 0.54,
         vAcross * 5.8 + uTime * 0.008
       ))
     );
@@ -190,7 +211,9 @@ const reflectionFragmentShader = /* glsl */ `
         mix(0.24, 0.15, uTheme) +
       brokenRipples * mix(0.84, 0.48, uTheme) +
       edgeSheen * mix(0.14, 0.095, uTheme);
-    reflection *= mix(0.58, 1.2, fresnel);
+    reflection *=
+      mix(0.58, 1.2, fresnel) *
+      (1.0 + uFlowEnergy * 0.18);
     reflection += abs(vWave) * mix(0.9, 0.5, uTheme);
     reflection *= mix(1.45, 1.08, uTheme);
 
@@ -205,8 +228,8 @@ const reflectionFragmentShader = /* glsl */ `
       edgeMask *
       revealMask();
     float oceanBlend =
-      smoothstep(0.8, 0.91, uProgress) *
-      smoothstep(0.7, 0.92, vLongitudinal);
+      smoothstep(0.84, 0.96, uProgress) *
+      smoothstep(0.72, 0.95, vLongitudinal);
     float oceanPath = exp(-pow(streamCoordinate / 0.085, 2.0));
     alpha *= mix(1.0, oceanPath * 0.26, oceanBlend);
 

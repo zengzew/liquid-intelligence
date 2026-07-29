@@ -90,6 +90,54 @@ export function getJourneyChapterPresence(
   );
 }
 
+/**
+ * Sharp text-legibility window, decoupled from the wide 3D water presence.
+ *
+ * The 3D worlds overlap heavily so the water morphs continuously between
+ * stages. DOM narrative text must NOT overlap that way — otherwise two or
+ * three headings ghost over each other during every handoff. This returns a
+ * plateau of full opacity near each chapter focus with fast shoulders that
+ * reach zero well before the neighbour appears, leaving a quiet band where
+ * only the water carries the transition.
+ */
+export function getJourneyChapterTextPresence(
+  progress: number,
+  chapter: JourneyChapter,
+) {
+  const previous = JOURNEY_CHAPTERS[chapter.index - 1];
+  const next = JOURNEY_CHAPTERS[chapter.index + 1];
+
+  const fadeBefore = previous
+    ? (chapter.focus - previous.focus) * 0.42
+    : 0.12;
+  const fadeAfter = next ? (next.focus - chapter.focus) * 0.42 : 0.14;
+  const plateauBefore = fadeBefore * 0.34;
+  const plateauAfter = fadeAfter * 0.34;
+
+  if (progress <= chapter.focus) {
+    if (progress >= chapter.focus - plateauBefore) {
+      return 1;
+    }
+
+    return smoothstep(
+      (progress - (chapter.focus - fadeBefore)) /
+        Math.max(0.0001, fadeBefore - plateauBefore),
+    );
+  }
+
+  if (progress <= chapter.focus + plateauAfter) {
+    return 1;
+  }
+
+  return (
+    1 -
+    smoothstep(
+      (progress - (chapter.focus + plateauAfter)) /
+        Math.max(0.0001, fadeAfter - plateauAfter),
+    )
+  );
+}
+
 export function getActiveJourneyChapter(progress: number) {
   let activeChapter: JourneyChapter = JOURNEY_CHAPTERS[0];
   let closestDistance = Number.POSITIVE_INFINITY;

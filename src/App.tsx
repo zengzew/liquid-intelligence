@@ -11,7 +11,7 @@ import JourneyNarrative from "./journey/JourneyNarrative";
 import {
   JOURNEY_CHAPTERS,
   getActiveJourneyChapter,
-  getJourneyChapterPresence,
+  getJourneyChapterTextPresence,
   type JourneyChapter,
 } from "./journey/chapters";
 import MaterialDebugPanel from "./MaterialDebugPanel";
@@ -229,7 +229,7 @@ export default function App() {
       runway.dataset.progress = progress.toFixed(3);
 
       for (const chapter of JOURNEY_CHAPTERS) {
-        const presence = getJourneyChapterPresence(progress, chapter);
+        const presence = getJourneyChapterTextPresence(progress, chapter);
         runway.style.setProperty(
           `--chapter-${chapter.id}-presence`,
           presence.toFixed(5),

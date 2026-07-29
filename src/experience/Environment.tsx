@@ -6,13 +6,14 @@ import {
 } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import {
+  BackSide,
   Color,
   DirectionalLight,
   FogExp2,
   HemisphereLight,
   MathUtils,
   Mesh,
-  MeshStandardMaterial,
+  ShaderMaterial,
 } from "three";
 import type { ExperienceTheme } from "../App";
 import type { JourneyProgress } from "./LiquidExperience";
@@ -22,16 +23,117 @@ interface EnvironmentProps {
   progressRef: MutableRefObject<JourneyProgress>;
 }
 
-const NIGHT_BACKGROUND = new Color("#020303");
-const MORNING_BACKGROUND = new Color("#f5f2ec");
-const NIGHT_GROUND = new Color("#020303");
-const MORNING_GROUND = new Color("#f1eee8");
+const NIGHT_BACKGROUND = new Color("#05090b");
+const MORNING_BACKGROUND = new Color("#eae4d7");
 const NIGHT_SKY = new Color("#65696b");
 const MORNING_SKY = new Color("#fff8ea");
-const NIGHT_GROUND_LIGHT = new Color("#010202");
+const NIGHT_GROUND_LIGHT = new Color("#040708");
 const MORNING_GROUND_LIGHT = new Color("#a8afb0");
 const NIGHT_KEY_LIGHT = new Color("#d5d6d2");
-const MORNING_KEY_LIGHT = new Color("#ffe9c7");
+const MORNING_KEY_LIGHT = new Color("#ead7ba");
+const NIGHT_SKY_ZENITH = new Color("#04070a");
+const MORNING_SKY_ZENITH = new Color("#ded8cb");
+const NIGHT_SKY_HORIZON = new Color("#10201f");
+const MORNING_SKY_HORIZON = new Color("#f7f0e0");
+
+const skyBackdropVertexShader = /* glsl */ `
+  varying vec3 vSkyDirection;
+
+  void main() {
+    vSkyDirection = position;
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`;
+
+const skyBackdropFragmentShader = /* glsl */ `
+  uniform vec3 uHorizonColor;
+  uniform vec3 uZenithColor;
+
+  varying vec3 vSkyDirection;
+
+  float skyHash(vec2 value) {
+    value = fract(value * vec2(123.34, 456.21));
+    value += dot(value, value + 45.32);
+    return fract(value.x * value.y);
+  }
+
+  void main() {
+    vec3 direction = normalize(vSkyDirection);
+    float horizonBand = exp(-pow(direction.y * 4.2, 2.0));
+    vec3 color = mix(uZenithColor, uHorizonColor, horizonBand);
+
+    // Hash dither keeps the huge gradient free of banding.
+    color += (skyHash(gl_FragCoord.xy * 0.713) - 0.5) * 0.005;
+
+    gl_FragColor = vec4(color, 1.0);
+
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }
+`;
+
+/**
+ * Camera-following gradient dome. Replaces the flat background colour with
+ * a faint luminous band at the horizon, giving the void spatial depth in
+ * both themes.
+ */
+function SkyBackdrop({ theme }: { theme: ExperienceTheme }) {
+  const meshRef = useRef<Mesh>(null);
+  const themeValue = useRef(theme === "morning" ? 1 : 0);
+  const material = useMemo(
+    () =>
+      new ShaderMaterial({
+        uniforms: {
+          uHorizonColor: { value: NIGHT_SKY_HORIZON.clone() },
+          uZenithColor: { value: NIGHT_SKY_ZENITH.clone() },
+        },
+        vertexShader: skyBackdropVertexShader,
+        fragmentShader: skyBackdropFragmentShader,
+        depthTest: false,
+        depthWrite: false,
+        fog: false,
+        side: BackSide,
+        toneMapped: true,
+      }),
+    [],
+  );
+
+  useEffect(() => () => material.dispose(), [material]);
+
+  useFrame(({ camera }, delta) => {
+    themeValue.current = MathUtils.damp(
+      themeValue.current,
+      theme === "morning" ? 1 : 0,
+      2.5,
+      delta,
+    );
+
+    const mix = themeValue.current;
+
+    if (meshRef.current) {
+      meshRef.current.position.copy(camera.position);
+    }
+
+    (material.uniforms.uZenithColor.value as Color)
+      .copy(NIGHT_SKY_ZENITH)
+      .lerp(MORNING_SKY_ZENITH, mix);
+    (material.uniforms.uHorizonColor.value as Color)
+      .copy(NIGHT_SKY_HORIZON)
+      .lerp(MORNING_SKY_HORIZON, mix);
+  });
+
+  return (
+    <mesh
+      ref={meshRef}
+      material={material}
+      frustumCulled={false}
+      renderOrder={-10}
+    >
+      <sphereGeometry args={[120, 32, 24]} />
+    </mesh>
+  );
+}
 
 function SoftboxEnvironment({ theme }: { theme: ExperienceTheme }) {
   const morning = theme === "morning";
@@ -42,19 +144,19 @@ function SoftboxEnvironment({ theme }: { theme: ExperienceTheme }) {
       frames={2}
       environmentIntensity={morning ? 0.96 : 1.08}
     >
-      <color attach="background" args={[morning ? "#d8d2c8" : "#050606"]} />
+      <color attach="background" args={[morning ? "#8fa0a0" : "#050606"]} />
       <Lightformer
         form="rect"
         color={morning ? "#ffd6a0" : "#e3e7e5"}
-        intensity={morning ? 2.45 : 2.75}
+        intensity={morning ? 2.6 : 2.75}
         position={[0.8, 9, 27]}
         scale={[1.05, 38]}
         target={[0.2, 0, -28]}
       />
       <Lightformer
         form="rect"
-        color={morning ? "#aeb9ba" : "#aeb7b8"}
-        intensity={morning ? 0.9 : 0.52}
+        color={morning ? "#96a5a3" : "#aeb7b8"}
+        intensity={morning ? 0.6 : 0.52}
         position={[-12, 6.5, 12]}
         scale={[2.4, 18]}
         target={[-2.5, 0, -35]}
@@ -68,7 +170,6 @@ export default function Environment({
   progressRef,
 }: EnvironmentProps) {
   const { scene } = useThree();
-  const floorRef = useRef<Mesh>(null);
   const hemisphereRef = useRef<HemisphereLight>(null);
   const keyLightRef = useRef<DirectionalLight>(null);
   const themeValue = useRef(theme === "morning" ? 1 : 0);
@@ -78,7 +179,7 @@ export default function Environment({
     const background = (
       theme === "morning" ? MORNING_BACKGROUND : NIGHT_BACKGROUND
     ).clone();
-    const fog = new FogExp2(background, theme === "morning" ? 0.01 : 0.014);
+    const fog = new FogExp2(background, theme === "morning" ? 0.0055 : 0.0115);
 
     scene.background = background;
     scene.fog = fog;
@@ -107,27 +208,20 @@ export default function Environment({
     if (scene.fog instanceof FogExp2) {
       scene.fog.color.copy(targetColor);
       scene.fog.density =
-        MathUtils.lerp(0.014, 0.01, mix) *
-        MathUtils.lerp(1, 0.78, progress);
+        MathUtils.lerp(0.0115, 0.0055, mix) *
+        MathUtils.lerp(1, 0.82, progress);
     }
 
     scene.environmentIntensity =
-      MathUtils.lerp(1.08, 0.92, mix) *
+      MathUtils.lerp(1.16, 1.02, mix) *
       MathUtils.lerp(0.94, 1.08, progress);
-
-    const floorMaterial = floorRef.current?.material;
-
-    if (floorMaterial instanceof MeshStandardMaterial) {
-      floorMaterial.color.copy(NIGHT_GROUND).lerp(MORNING_GROUND, mix);
-      floorMaterial.roughness = MathUtils.lerp(0.99, 0.94, mix);
-    }
 
     if (hemisphereRef.current) {
       hemisphereRef.current.color.copy(NIGHT_SKY).lerp(MORNING_SKY, mix);
       hemisphereRef.current.groundColor
         .copy(NIGHT_GROUND_LIGHT)
         .lerp(MORNING_GROUND_LIGHT, mix);
-      hemisphereRef.current.intensity = MathUtils.lerp(0.18, 0.88, mix);
+      hemisphereRef.current.intensity = MathUtils.lerp(0.3, 0.62, mix);
     }
 
     if (keyLightRef.current) {
@@ -135,7 +229,7 @@ export default function Environment({
         .copy(NIGHT_KEY_LIGHT)
         .lerp(MORNING_KEY_LIGHT, mix);
       keyLightRef.current.intensity =
-        MathUtils.lerp(1.15, 1.85, mix) *
+        MathUtils.lerp(1.18, 1.58, mix) *
         MathUtils.lerp(0.96, 1.08, progress);
     }
   });
@@ -143,6 +237,7 @@ export default function Environment({
   return (
     <>
       <SoftboxEnvironment key={theme} theme={theme} />
+      <SkyBackdrop theme={theme} />
 
       <hemisphereLight ref={hemisphereRef} args={["#65696b", "#010202", 0.18]} />
       <directionalLight
@@ -151,15 +246,6 @@ export default function Environment({
         intensity={1.15}
         position={[-8, 14, 5]}
       />
-
-      <mesh
-        ref={floorRef}
-        position={[0, -2.8, -48]}
-        rotation={[-Math.PI / 2, 0, 0]}
-      >
-        <planeGeometry args={[260, 420, 1, 1]} />
-        <meshStandardMaterial color="#020303" roughness={0.99} metalness={0} />
-      </mesh>
     </>
   );
 }

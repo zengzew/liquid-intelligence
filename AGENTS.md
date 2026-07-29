@@ -4,20 +4,21 @@
 
 Liquid Intelligence is an immersive WebGL personal portfolio experience.
 
-This is NOT a normal portfolio website.
-
-The website itself is the experience.
+This is not a normal portfolio website. The website itself is the experience.
 
 Core metaphor:
 
 A small stream grows into a river and finally becomes an ocean.
 
 The water represents:
+
 - engineering journey
 - AI exploration
 - creativity
 - continuous learning
 
+Water is the navigation system, the continuous world, and the main storytelling
+medium. Do not place decorative WebGL behind a conventional website.
 
 ## Creative Direction
 
@@ -28,107 +29,108 @@ Target feeling:
 - cinematic
 - premium
 - calm
+- immersive
 
-Reference:
-- Prior Holdings Experience
-- Awwwards immersive websites
-- Apple product experiences
-
+The user should feel that they are traveling through one authored world rather
+than browsing separate pages or watching a generic Three.js demo.
 
 Avoid:
 
-- generic portfolio layouts
-- SaaS landing pages
-- cyberpunk style
-- excessive neon
-- excessive particles
-- dashboard UI
+- generic portfolio and SaaS layouts
+- dashboard or HUD styling
+- disconnected scenes
+- cyberpunk styling
+- excessive neon, particles, and decorative effects
+- features that weaken the water-led journey
 
+## Prior Reference
 
-## Core Rule
+Study these two case studies before making major visual or interaction
+decisions:
 
-Water is the navigation system.
+- https://medium.com/%40hello_11138/prior-holdings-experience-case-study-8c4be7a95281
+- https://immersive-g.com/projects/prior-holding/?utm_source=chatgpt.com+%22Prior+Holding%22
 
-Do not add WebGL effects as decoration behind a normal website.
+Representative images:
 
-The user should feel they are traveling through one continuous world.
+- https://ig-medias-prod.ams3.digitaloceanspaces.com/medium_desktop_2160x1245_1_71c5662bde.jpg
+- https://ig-medias-prod.ams3.digitaloceanspaces.com/medium_desktop_2160x1245_2_af90c09786.jpg
+- https://ig-medias-prod.ams3.digitaloceanspaces.com/medium_desktop_2160x1245_4_6fccf3d10d.jpg
+- https://ig-medias-prod.ams3.digitaloceanspaces.com/medium_desktop_2160x1245_5_868e96e86d.jpg
+- https://ig-medias-prod.ams3.digitaloceanspaces.com/medium_desktop_2160x1245_7_acda1ebbba.jpg
 
+Prior is a reference for experience quality and creative principles, not a
+template to copy. Learn from how one central visual element carries motion,
+emotion, content, and continuity through an entire journey. Do not copy its
+branding, ribbon, or individual compositions.
 
-## Tech Stack
+## Local Source of Truth
 
-Use:
+Use only the current Portfolio workspace as the local project source:
 
-- React
-- TypeScript
-- Three.js
-- React Three Fiber
-- Drei
-- GSAP
-- GLSL shaders
+`/Users/zengze/Documents/portfolio`
 
+Read the current code, Git diff, `README.md`, and evidence under
+`design-reviews/`. Historical screenshots explain earlier decisions, but the
+current checkout and its live browser rendering are the latest truth.
 
-Keep:
+Do not look for or rely on the deleted `/Users/zengze/Documents/prior` project.
 
-- WebGL logic separated
-- components reusable
-- shaders maintainable
+## Experience Rules
 
+Preserve:
 
-## Interaction
+- one continuous water world
+- a stream growing into a river and ocean
+- five clearly authored stages with distinct visual memories
+- scrolling as the driver of camera, water, and scene progression
+- reversible, continuous travel
+- water as the main character
+- intentional Night and Morning environments
+- authored desktop and mobile compositions
+- project stories that emerge naturally from the water world
 
-Scrolling controls:
+Avoid traditional page transitions and conventional portfolio sections.
 
-- camera movement
-- water growth
-- scene progression
+Theme changes must affect the 3D environment, not only CSS.
 
-Avoid traditional page transitions.
+## Technical Direction
 
+Use the existing React, TypeScript, Three.js, React Three Fiber, Drei, GSAP, and
+GLSL architecture.
 
-## Visual Requirements
+Keep WebGL concerns separated, components reusable, and shaders maintainable,
+while allowing the implementation approach to follow the strongest creative
+solution.
 
-Support:
+## Working Method
 
-Dark mode:
-- night river
-- black background
-- subtle reflections
+Before editing:
 
-Light mode:
-- morning river
-- warm white background
-- soft daylight
+1. Read this file and inspect `git status`.
+2. Preserve all existing and uncommitted work.
+3. Experience the latest version in a real browser.
+4. Review the result against the project purpose and Prior case studies.
 
+Then identify the single issue that most limits the overall experience and
+complete one focused, high-impact iteration. Do not stop at recommendations
+when the task authorizes implementation, and do not redesign unrelated systems
+without evidence.
 
-Theme changes should affect the 3D environment, not only CSS.
-
-
-## Development Strategy
-
-Build incrementally.
-
-Order:
-
-1. Water prototype
-2. Camera movement
-3. Stream → River → Ocean progression
-4. Project worlds
-5. Final polish
-
-
-Do not optimize for more features.
-
-Optimize for visual impact.
-
+Never reset, clean, discard, or overwrite existing work. Do not commit, push,
+or deploy unless the user explicitly requests it.
 
 ## Acceptance Standard
 
-Before considering a task complete:
+Review the finished result in a real browser across the journey, both themes,
+and representative desktop and mobile views.
 
-Check in browser.
+Separate engineering health from visual quality. A successful build or good
+frame rate does not prove that the experience is visually complete.
 
-Ask:
+Before considering a visual task complete, ask:
 
-"Does this feel like an award-level immersive WebGL experience?"
+> Does this feel like an award-level immersive WebGL experience?
 
-If it feels like a normal Three.js demo, continue improving.
+If it still feels like a normal Three.js demo, say so honestly, identify the
+largest remaining weakness, and continue improving when it is within scope.

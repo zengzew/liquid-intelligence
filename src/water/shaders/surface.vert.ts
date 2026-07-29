@@ -5,6 +5,9 @@ const surfaceVertexShader = /* glsl */ `
   uniform float uMotionScale;
   uniform vec2 uPointer;
   uniform float uReveal;
+  uniform float uFlowDirection;
+  uniform float uFlowEnergy;
+  uniform float uFlowPhase;
 
   attribute float aLongitudinal;
   attribute float aAcross;
@@ -50,25 +53,58 @@ const surfaceVertexShader = /* glsl */ `
   void main() {
     vec3 transformed = position;
     float downstream = smoothstep(0.05, 0.92, aLongitudinal);
-    float flowingNoise = fbm(vec2(
-      aLongitudinal * 15.0 - uTime * 0.12,
-      aAcross * 2.2 + uTime * 0.018
-    ));
-    float longWave = sin(
-      aLongitudinal * 83.0 -
-      uTime * 0.72 +
-      aAcross * 3.1 +
-      flowingNoise * 2.2
-    );
-    float crossWave = sin(
-      aLongitudinal * 31.0 -
-      uTime * 0.38 -
-      aAcross * 7.0
-    );
-    float surfaceWave =
-      (longWave * 0.016 + crossWave * 0.009) *
-      mix(0.18, 1.0, downstream) *
-      uMotionScale;
+    float broadSwell =
+      (
+        sin(
+          aLongitudinal * 12.8 -
+          uTime * 0.16 -
+          uFlowPhase * 0.52 +
+          aAcross * 1.9
+        ) * 0.032 +
+        sin(
+          aLongitudinal * 6.1 -
+          uTime * 0.065 -
+          uFlowPhase * 0.21 -
+          aAcross * 3.2
+        ) * 0.018
+      ) *
+      mix(0.42, 1.0, 1.0 - abs(aAcross));
+    float bankRoll =
+      sin(
+        aLongitudinal * 9.2 -
+        uTime * 0.11 -
+        uFlowPhase * 0.28 +
+        0.65
+      ) *
+      aAcross *
+      0.026;
+    float capillary =
+      (
+        sin(
+          aLongitudinal * 91.0 -
+          uTime * 0.82 -
+          uFlowPhase * 2.3 +
+          aAcross * 4.6
+        ) * 0.009 +
+        sin(
+          aLongitudinal * 47.0 -
+          uTime * 0.44 -
+          uFlowPhase * 1.4 -
+          aAcross * 8.0
+        ) * 0.006
+      ) *
+      mix(0.2, 1.0, downstream);
+    float flowImpulse =
+      sin(
+        aLongitudinal * 27.0 -
+        uTime * 0.34 -
+        uFlowPhase * 2.6 +
+        aAcross * (4.0 + uFlowDirection * 1.15)
+      ) *
+      0.03 *
+      uFlowEnergy *
+      mix(0.5, 1.0, 1.0 - abs(aAcross)) *
+      downstream;
 
     float pointerProgress = max(0.02, uReveal - 0.04);
     float pointerDistance = distance(
@@ -81,14 +117,24 @@ const surfaceVertexShader = /* glsl */ `
       0.011 *
       uMotionScale;
 
-    transformed.y += surfaceWave + pointerRipple;
+    float wave =
+      (
+        broadSwell +
+        bankRoll +
+        capillary +
+        flowImpulse +
+        pointerRipple
+      ) *
+      smoothstep(0.12, 0.78, aLongitudinal) *
+      uMotionScale;
+    transformed.y += wave;
 
     vec4 worldPosition = modelMatrix * vec4(transformed, 1.0);
     vRiverUv = vec2(aAcross * 0.5 + 0.5, aLongitudinal);
     vWorldPosition = worldPosition.xyz;
     vAcross = aAcross;
     vLongitudinal = aLongitudinal;
-    vWave = surfaceWave + pointerRipple;
+    vWave = wave;
 
     gl_Position = projectionMatrix * viewMatrix * worldPosition;
   }

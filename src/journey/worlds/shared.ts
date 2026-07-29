@@ -29,6 +29,11 @@ interface RibbonGeometryOptions {
   lateralOffset?: (localProgress: number, curveProgress: number) => number;
   segments?: number;
   start?: number;
+  verticalOffset?: (
+    localProgress: number,
+    curveProgress: number,
+    across: number,
+  ) => number;
   width: (localProgress: number, curveProgress: number) => number;
 }
 
@@ -257,6 +262,7 @@ export function createRibbonGeometry(
     lateralOffset = () => 0,
     segments = 88,
     start = 0,
+    verticalOffset = () => 0,
     width,
   }: RibbonGeometryOptions,
 ) {
@@ -296,7 +302,11 @@ export function createRibbonGeometry(
           lateral,
           across * width(localProgress, curveProgress) * bankVariation,
         )
-        .addScaledVector(UP, surfaceContour);
+        .addScaledVector(
+          UP,
+          surfaceContour +
+            verticalOffset(localProgress, curveProgress, across),
+        );
 
       positions.push(vertex.x, vertex.y, vertex.z);
       uvs.push(column / crossSegments, localProgress);
