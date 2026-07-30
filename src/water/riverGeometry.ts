@@ -28,7 +28,13 @@ function smootherStep(value: number) {
 
 export function getRevealFrontier(progress: number) {
   const clamped = Math.min(1, Math.max(0, progress));
-  return 0.024 + Math.pow(clamped, 0.82) * 0.976;
+  const baseFrontier = 0.024 + Math.pow(clamped, 0.82) * 0.976;
+  const oceanLead = smootherStep((clamped - 0.7) / 0.16);
+
+  // Once the camera begins lowering toward the horizon, finish revealing the
+  // river ahead of it. This keeps the reveal cross-section beyond the frame
+  // instead of exposing a straight, rectangular edge during the ocean handoff.
+  return baseFrontier + (1 - baseFrontier) * oceanLead;
 }
 
 export function getRiverHalfWidth(progress: number) {

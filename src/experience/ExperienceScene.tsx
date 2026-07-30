@@ -61,7 +61,7 @@ export default function ExperienceScene({
           progressRef={progressRef}
         />
       ) : null}
-      <CameraRig progressRef={progressRef} />
+      <CameraRig curve={curve} progressRef={progressRef} />
     </>
   );
 }

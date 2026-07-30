@@ -1,3 +1,5 @@
+import oceanTransitionGlsl from "./oceanTransition.glsl";
+
 const shadowFragmentShader = /* glsl */ `
   precision highp float;
 
@@ -8,6 +10,8 @@ const shadowFragmentShader = /* glsl */ `
 
   varying float vAcross;
   varying float vLongitudinal;
+
+  ${oceanTransitionGlsl}
 
   float hash21(vec2 value) {
     value = fract(value * vec2(123.34, 456.21));
@@ -26,13 +30,11 @@ const shadowFragmentShader = /* glsl */ `
       0.1 + edgeNoise * 0.035,
       edgeDistance
     );
-    float reveal =
-      (1.0 - smoothstep(
-        uReveal - 0.02,
-        uReveal,
-        vLongitudinal
-      )) *
-      smoothstep(0.0, 0.004, vLongitudinal);
+    float reveal = riverRevealCoverage(
+      uReveal,
+      uProgress,
+      vLongitudinal
+    );
     float alpha =
       bodyMask *
       reveal *
@@ -40,9 +42,8 @@ const shadowFragmentShader = /* glsl */ `
       smoothstep(0.04, 0.72, vLongitudinal) *
       mix(
         1.0,
-        0.04,
-        smoothstep(0.8, 0.91, uProgress) *
-          smoothstep(0.7, 0.92, vLongitudinal)
+        0.025,
+        riverToOceanBlend(uProgress, vLongitudinal, uTheme)
       );
 
     if (alpha < 0.004) {

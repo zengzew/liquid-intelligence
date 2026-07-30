@@ -1,3 +1,5 @@
+import oceanTransitionGlsl from "./oceanTransition.glsl";
+
 const depthFragmentShader = /* glsl */ `
   precision highp float;
 
@@ -11,6 +13,7 @@ const depthFragmentShader = /* glsl */ `
   varying float vDepth;
 
   #include <fog_pars_fragment>
+  ${oceanTransitionGlsl}
 
   float hash21(vec2 value) {
     value = fract(value * vec2(123.34, 456.21));
@@ -30,13 +33,11 @@ const depthFragmentShader = /* glsl */ `
   }
 
   void main() {
-    float reveal =
-      (1.0 - smoothstep(
-        uReveal - 0.02,
-        uReveal,
-        vLongitudinal
-      )) *
-      smoothstep(0.0, 0.004, vLongitudinal);
+    float reveal = riverRevealCoverage(
+      uReveal,
+      uProgress,
+      vLongitudinal
+    );
 
     if (reveal < 0.01) {
       discard;
@@ -55,9 +56,7 @@ const depthFragmentShader = /* glsl */ `
     vec3 morningDeep = vec3(0.43, 0.52, 0.54);
     vec3 nightColor = mix(nightShallow, nightDeep, depthShade);
     vec3 morningColor = mix(morningShallow, morningDeep, depthShade);
-    float oceanBlend =
-      smoothstep(0.8, 0.91, uProgress) *
-      smoothstep(0.7, 0.92, vLongitudinal);
+    float oceanBlend = riverToOceanBlend(uProgress, vLongitudinal, uTheme);
     nightColor = mix(
       nightColor,
       vec3(0.014, 0.018, 0.02),

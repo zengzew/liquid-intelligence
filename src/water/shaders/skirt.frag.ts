@@ -1,3 +1,5 @@
+import oceanTransitionGlsl from "./oceanTransition.glsl";
+
 const skirtFragmentShader = /* glsl */ `
   precision highp float;
 
@@ -8,26 +10,24 @@ const skirtFragmentShader = /* glsl */ `
   varying vec2 vSkirtUv;
   varying float vLongitudinal;
 
+  ${oceanTransitionGlsl}
+
   void main() {
-    float reveal =
-      (1.0 - smoothstep(
-        uReveal - 0.018,
-        uReveal,
-        vLongitudinal
-      )) *
-      smoothstep(0.0, 0.004, vLongitudinal);
+    float reveal = riverRevealCoverage(
+      uReveal,
+      uProgress,
+      vLongitudinal
+    );
     float depthGradient = mix(0.72, 0.18, vSkirtUv.x);
     vec3 nightDeep = vec3(0.018, 0.021, 0.022);
     vec3 morningDeep = vec3(0.25, 0.32, 0.34);
     vec3 color = mix(nightDeep, morningDeep, uTheme);
-    float oceanBlend =
-      smoothstep(0.8, 0.91, uProgress) *
-      smoothstep(0.7, 0.92, vLongitudinal);
+    float oceanBlend = riverToOceanBlend(uProgress, vLongitudinal, uTheme);
     float alpha =
       reveal *
       depthGradient *
       mix(0.58, 0.44, uTheme) *
-      mix(1.0, 0.06, oceanBlend);
+      mix(1.0, 0.025, oceanBlend);
 
     if (alpha < 0.008) {
       discard;

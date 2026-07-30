@@ -40,6 +40,7 @@ import shadowFragmentShader from "./shaders/shadow.frag";
 import skirtFragmentShader from "./shaders/skirt.frag";
 import skirtVertexShader from "./shaders/skirt.vert";
 import surfaceVertexShader from "./shaders/surface.vert";
+import oceanTransitionGlsl from "./shaders/oceanTransition.glsl";
 import { createWaterNormalTexture } from "./waterNormals";
 
 interface RiverProps {
@@ -638,7 +639,8 @@ export default function River({
           varying vec2 vRiverUv;
           varying float vRiverLongitudinal;
           varying float vRiverAcross;
-          varying vec3 vRiverWorldPosition;`,
+          varying vec3 vRiverWorldPosition;
+          ${oceanTransitionGlsl}`,
         )
         .replace(
           "#include <normal_fragment_begin>",
@@ -758,16 +760,16 @@ export default function River({
             0.066 + riverEdgeTexture * 0.027,
             riverEdgeDistance
           );
-          float riverRevealMask =
-            (1.0 - smoothstep(
-              uReveal - 0.02,
-              uReveal,
-              vRiverLongitudinal
-            )) *
-            smoothstep(0.0, 0.004, vRiverLongitudinal);
-          float riverOceanBlend =
-            smoothstep(0.84, 0.96, uProgress) *
-            smoothstep(0.72, 0.95, vRiverLongitudinal);
+          float riverRevealMask = riverRevealCoverage(
+            uReveal,
+            uProgress,
+            vRiverLongitudinal
+          );
+          float riverOceanBlend = riverToOceanBlend(
+            uProgress,
+            vRiverLongitudinal,
+            uTheme
+          );
           float riverMottle = texture2D(
             normalMap,
             vec2(
@@ -781,7 +783,7 @@ export default function River({
           diffuseColor.a *=
             riverEdgeMask *
             riverRevealMask *
-            mix(1.0, 0.22, riverOceanBlend);
+            mix(1.0, 0.03, riverOceanBlend);
           if (diffuseColor.a < 0.006) discard;`,
         )
         .replace(

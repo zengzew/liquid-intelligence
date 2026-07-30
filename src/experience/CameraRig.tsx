@@ -1,10 +1,16 @@
 import { useMemo, useRef } from "react";
 import type { MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
-import { MathUtils, PerspectiveCamera, Vector3 } from "three";
+import {
+  CatmullRomCurve3,
+  MathUtils,
+  PerspectiveCamera,
+  Vector3,
+} from "three";
 import type { JourneyProgress } from "./LiquidExperience";
 
 interface CameraRigProps {
+  curve: CatmullRomCurve3;
   progressRef: MutableRefObject<JourneyProgress>;
 }
 
@@ -16,123 +22,227 @@ interface CameraShot {
   roll: number;
 }
 
-const DESKTOP_SHOTS: CameraShot[] = [
-  {
-    at: 0.03,
-    position: new Vector3(-2, 10, -3),
-    target: new Vector3(5, 0.8, 4.2),
-    fov: 40,
-    roll: -0.008,
-  },
-  {
-    at: 0.22,
-    position: new Vector3(-10, 4.2, -18.5),
-    target: new Vector3(1.8, 1.8, -10.8),
-    fov: 40,
-    roll: -0.04,
-  },
-  {
-    at: 0.46,
-    position: new Vector3(-7.8, 5.65, -60.5),
-    target: new Vector3(-0.15, 1.25, -42.5),
-    fov: 42,
-    roll: -0.034,
-  },
-  {
-    at: 0.54,
-    position: new Vector3(-7.4, 5.35, -71.5),
-    target: new Vector3(0.2, 1.15, -49),
-    fov: 42,
-    roll: -0.028,
-  },
-  {
-    at: 0.62,
-    position: new Vector3(-2.8, 5.8, -87),
-    target: new Vector3(0.35, 2.2, -59),
-    fov: 44,
-    roll: -0.01,
-  },
-  {
-    at: 0.7,
-    position: new Vector3(0.5, 8, -104),
-    target: new Vector3(0.3, 4, -68),
-    fov: 48,
-    roll: 0.001,
-  },
-  {
-    at: 0.92,
-    position: new Vector3(0.4, 5.2, -108),
-    target: new Vector3(0, 1.2, -30),
-    fov: 49,
-    roll: 0,
-  },
-  {
-    at: 1,
-    position: new Vector3(0.1, 5.4, -116),
-    target: new Vector3(0, -0.75, -24),
-    fov: 48,
-    roll: 0,
-  },
-];
+interface CameraShotSpec {
+  at: number;
+  positionAt: number;
+  targetAt: number;
+  height: number;
+  targetHeight: number;
+  targetLead?: number;
+  lateral?: number;
+  fov: number;
+  roll: number;
+}
 
-const MOBILE_SHOTS: CameraShot[] = [
+/**
+ * Spatial narrative contract:
+ *
+ * - positionAt is always upstream of targetAt, so the camera looks downstream.
+ * - river width grows with curve progress, therefore downstream maps toward
+ *   the upper/forward part of the image instead of widening into the bottom.
+ * - height and targetHeight converge through the journey, continuously
+ *   raising the view from a source overview to a level ocean horizon.
+ */
+const DESKTOP_SHOT_SPECS: CameraShotSpec[] = [
   {
     at: 0.03,
-    position: new Vector3(-2.8, 6.8, -3),
-    target: new Vector3(0.8, 0.4, 3.8),
-    fov: 51,
-    roll: -0.01,
+    positionAt: 0.012,
+    targetAt: 0.075,
+    height: 14.5,
+    targetHeight: 0.12,
+    lateral: -0.45,
+    fov: 38,
+    roll: -0.004,
   },
   {
     at: 0.22,
-    position: new Vector3(-6, 6, -19),
-    target: new Vector3(1.4, 3, -11),
-    fov: 51,
-    roll: -0.025,
-  },
-  {
-    at: 0.46,
-    position: new Vector3(-5, 10, -64),
-    target: new Vector3(-0.8, 5, -42),
-    fov: 53,
-    roll: -0.025,
-  },
-  {
-    at: 0.54,
-    position: new Vector3(-3.8, 7.6, -72),
-    target: new Vector3(0.2, 2.6, -49),
-    fov: 52,
+    positionAt: 0.04,
+    targetAt: 0.3,
+    height: 11.5,
+    targetHeight: 0.24,
+    lateral: -0.65,
+    fov: 39,
     roll: -0.018,
   },
   {
+    at: 0.46,
+    positionAt: 0.05,
+    targetAt: 0.535,
+    height: 14,
+    targetHeight: 0.46,
+    lateral: -1.15,
+    fov: 30,
+    roll: -0.016,
+  },
+  {
+    at: 0.54,
+    positionAt: 0.12,
+    targetAt: 0.605,
+    height: 13,
+    targetHeight: 0.68,
+    lateral: -0.95,
+    fov: 34,
+    roll: -0.012,
+  },
+  {
     at: 0.62,
-    position: new Vector3(-1.4, 8.2, -89),
-    target: new Vector3(0.35, 3.8, -60),
-    fov: 54,
+    positionAt: 0.22,
+    targetAt: 0.68,
+    height: 11,
+    targetHeight: 0.98,
+    lateral: -0.55,
+    fov: 39,
     roll: -0.006,
   },
   {
     at: 0.7,
-    position: new Vector3(0.2, 10, -110),
-    target: new Vector3(0.4, 5, -68),
-    fov: 55,
+    positionAt: 0.34,
+    targetAt: 0.75,
+    height: 9,
+    targetHeight: 1.34,
+    lateral: -0.15,
+    fov: 44,
     roll: 0.001,
   },
   {
     at: 0.92,
-    position: new Vector3(0.1, 9, -108),
-    target: new Vector3(0, 2, -28),
-    fov: 55,
+    positionAt: 0.77,
+    targetAt: 1,
+    targetLead: 94,
+    height: 3.2,
+    targetHeight: 2,
+    lateral: 0,
+    fov: 51,
     roll: 0,
   },
   {
     at: 1,
-    position: new Vector3(0, 8, -116),
-    target: new Vector3(0, -0.76, -20),
-    fov: 55,
+    positionAt: 0.83,
+    targetAt: 1,
+    targetLead: 122,
+    height: 3,
+    targetHeight: 2.04,
+    lateral: 0,
+    fov: 52,
     roll: 0,
   },
 ];
+
+const MOBILE_SHOT_SPECS: CameraShotSpec[] = [
+  {
+    at: 0.03,
+    positionAt: 0.012,
+    targetAt: 0.075,
+    height: 15.2,
+    targetHeight: 0.12,
+    lateral: -0.25,
+    fov: 53,
+    roll: -0.003,
+  },
+  {
+    at: 0.22,
+    positionAt: 0.03,
+    targetAt: 0.3,
+    height: 13,
+    targetHeight: 0.36,
+    lateral: -0.35,
+    fov: 53,
+    roll: -0.012,
+  },
+  {
+    at: 0.46,
+    positionAt: 0.04,
+    targetAt: 0.535,
+    height: 16,
+    targetHeight: 0.72,
+    lateral: -0.45,
+    fov: 44,
+    roll: -0.012,
+  },
+  {
+    at: 0.54,
+    positionAt: 0.1,
+    targetAt: 0.605,
+    height: 14.5,
+    targetHeight: 0.94,
+    lateral: -0.35,
+    fov: 46,
+    roll: -0.009,
+  },
+  {
+    at: 0.62,
+    positionAt: 0.2,
+    targetAt: 0.68,
+    height: 12.5,
+    targetHeight: 1.24,
+    lateral: -0.22,
+    fov: 49,
+    roll: -0.004,
+  },
+  {
+    at: 0.7,
+    positionAt: 0.32,
+    targetAt: 0.75,
+    height: 11,
+    targetHeight: 1.56,
+    lateral: -0.08,
+    fov: 52,
+    roll: 0.001,
+  },
+  {
+    at: 0.92,
+    positionAt: 0.75,
+    targetAt: 1,
+    targetLead: 88,
+    height: 4.1,
+    targetHeight: 2.78,
+    lateral: 0,
+    fov: 56,
+    roll: 0,
+  },
+  {
+    at: 1,
+    positionAt: 0.81,
+    targetAt: 1,
+    targetLead: 116,
+    height: 3.8,
+    targetHeight: 2.7,
+    lateral: 0,
+    fov: 56,
+    roll: 0,
+  },
+];
+
+const WORLD_UP = new Vector3(0, 1, 0);
+
+function createCameraShots(
+  curve: CatmullRomCurve3,
+  specs: CameraShotSpec[],
+) {
+  return specs.map((spec) => {
+    const position = curve.getPointAt(spec.positionAt);
+    const positionTangent = curve.getTangentAt(spec.positionAt).normalize();
+    const lateral = new Vector3()
+      .crossVectors(WORLD_UP, positionTangent)
+      .normalize();
+    position
+      .addScaledVector(lateral, spec.lateral ?? 0)
+      .addScaledVector(WORLD_UP, spec.height);
+
+    const target = curve.getPointAt(spec.targetAt);
+    const targetTangent = curve.getTangentAt(spec.targetAt).normalize();
+    target.addScaledVector(targetTangent, spec.targetLead ?? 0);
+    target.y = spec.targetHeight;
+
+    return {
+      at: spec.at,
+      position,
+      target,
+      fov: spec.fov,
+      roll: spec.roll,
+    };
+  });
+}
 
 function smootherStep(value: number) {
   const clamped = MathUtils.clamp(value, 0, 1);
@@ -149,11 +259,13 @@ function findShotPair(shots: CameraShot[], progress: number) {
   return [shots[shots.length - 2], shots[shots.length - 1]] as const;
 }
 
-export default function CameraRig({ progressRef }: CameraRigProps) {
+export default function CameraRig({ curve, progressRef }: CameraRigProps) {
   const cameraPosition = useRef(new Vector3());
   const cameraTarget = useRef(new Vector3());
+  const cameraDirection = useRef(new Vector3());
   const pointerOffset = useRef(new Vector3());
   const scrollMomentum = useRef(0);
+  const lastTelemetryAt = useRef(-1);
   const reducedMotion = useMemo(
     () =>
       typeof window !== "undefined" &&
@@ -161,11 +273,14 @@ export default function CameraRig({ progressRef }: CameraRigProps) {
     [],
   );
   const shotsByViewport = useMemo(
-    () => ({ desktop: DESKTOP_SHOTS, mobile: MOBILE_SHOTS }),
-    [],
+    () => ({
+      desktop: createCameraShots(curve, DESKTOP_SHOT_SPECS),
+      mobile: createCameraShots(curve, MOBILE_SHOT_SPECS),
+    }),
+    [curve],
   );
 
-  useFrame(({ camera, pointer, size }, delta) => {
+  useFrame(({ camera, clock, pointer, size }, delta) => {
     const progress = progressRef.current.current;
     const shots =
       size.width < 700 ? shotsByViewport.mobile : shotsByViewport.desktop;
@@ -211,6 +326,34 @@ export default function CameraRig({ progressRef }: CameraRigProps) {
     cameraTarget.current.x += pointerOffset.current.x * 0.45;
     cameraTarget.current.y += pointerOffset.current.y * 0.56;
     cameraTarget.current.y += scrollMomentum.current * 0.08;
+
+    if (clock.elapsedTime - lastTelemetryAt.current > 0.25) {
+      cameraDirection.current
+        .copy(cameraTarget.current)
+        .sub(camera.position);
+      const horizontalDistance = Math.hypot(
+        cameraDirection.current.x,
+        cameraDirection.current.z,
+      );
+      const downwardPitch = MathUtils.radToDeg(
+        Math.atan2(-cameraDirection.current.y, horizontalDistance),
+      );
+
+      document.documentElement.dataset.cameraPitch =
+        downwardPitch.toFixed(1);
+      document.documentElement.dataset.cameraDirection =
+        cameraTarget.current.z < camera.position.z ? "downstream" : "upstream";
+      document.documentElement.dataset.cameraPosition = camera.position
+        .toArray()
+        .map((value) => value.toFixed(2))
+        .join(",");
+      document.documentElement.dataset.cameraTarget = cameraTarget.current
+        .toArray()
+        .map((value) => value.toFixed(2))
+        .join(",");
+      lastTelemetryAt.current = clock.elapsedTime;
+    }
+
     camera.lookAt(cameraTarget.current);
     camera.rotateZ(
       MathUtils.lerp(from.roll, to.roll, localProgress) +

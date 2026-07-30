@@ -83,6 +83,11 @@ Preserve:
 - one continuous water world
 - a stream growing into a river and ocean
 - five clearly authored stages with distinct visual memories
+- a downstream screen-space direction that travels from the lower foreground
+  toward the upper frame; the water must become visibly broader in that
+  forward/upward direction
+- a camera journey that begins in a steep source overview and continuously
+  raises to a level ocean horizon
 - scrolling as the driver of camera, water, and scene progression
 - reversible, continuous travel
 - water as the main character
@@ -93,6 +98,12 @@ Preserve:
 Avoid traditional page transitions and conventional portfolio sections.
 
 Theme changes must affect the 3D environment, not only CSS.
+
+The spatial direction is a narrative contract, not just a world-coordinate
+detail. At the five authored focus points (`0.03`, `0.22`, `0.46`, `0.70`,
+`0.92`), the viewer must read forward progress toward the top/horizon rather
+than a river widening toward the bottom of the screen. Scrolling upward must
+reverse the same path without a cut or orientation flip.
 
 ## Technical Direction
 

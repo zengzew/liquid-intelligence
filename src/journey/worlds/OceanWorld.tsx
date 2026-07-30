@@ -38,6 +38,8 @@ import { dampThemeMix, type LiquidWorldProps } from "./shared";
  * - a tide-advance reveal: the sea emerges at the horizon first and spreads
  *   toward the camera, so the river visibly becomes the ocean instead of
  *   cross-fading into it
+ * - a downstream-facing horizon on the negative-Z journey axis, matching the
+ *   camera's source-to-ocean travel direction
  * - cursor ripples on the sea, raycast from the pointer each frame
  */
 
@@ -48,6 +50,8 @@ const MORNING_FAR = new Color("#e4ddcd");
 const NIGHT_BACKGROUND = new Color("#05090b");
 const MORNING_BACKGROUND = new Color("#eae4d7");
 const SEA_LEVEL = -0.64;
+const OCEAN_CENTER_Z = -105;
+const HORIZON_Z = -216;
 const SEA_PLANE = new Plane(new Vector3(0, 1, 0), -SEA_LEVEL);
 const SEA_RAYCASTER = new Raycaster();
 const NIGHT_PATH = new Color("#c7d4d1");
@@ -162,7 +166,7 @@ const oceanSurfaceFragmentShader = /* glsl */ `
 
     // Glitter path toward the horizon: a tight world-space azimuth band on
     // the journey axis, widened by long streaks and sharpened sparkle.
-    float alignment = max(dot(viewDirectionXZ, vec2(0.0, 1.0)), 0.0);
+    float alignment = max(dot(viewDirectionXZ, vec2(0.0, -1.0)), 0.0);
     float pathBand = pow(alignment, mix(110.0, 150.0, uTheme));
     float grazing = pow(
       1.0 -
@@ -234,7 +238,6 @@ const oceanSurfaceFragmentShader = /* glsl */ `
     // replaced by it.
     float tideRadius = mix(150.0, -20.0, uAdvance);
     float tideMask =
-      1.0 -
       smoothstep(tideRadius - 30.0, tideRadius + 5.0, distanceToFragment);
 
     // Cursor ring highlight, kept subtle so the sea stays calm.
@@ -379,13 +382,16 @@ export default function OceanWorld({
   const lastPointerNdc = useMemo(() => new Vector2(), []);
   const pointerHit = useMemo(() => new Vector3(), []);
   const surfaceGeometry = useMemo(
-    () => new PlaneGeometry(220, 260, 96, 108),
+    () => new PlaneGeometry(240, 320, 96, 128),
     [],
   );
   const glowGeometry = useMemo(() => new PlaneGeometry(52, 17), []);
   const surfaceMaterial = useMemo(createOceanSurfaceMaterial, []);
   const glowMaterial = useMemo(createHorizonGlowMaterial, []);
-  const glowPosition = useMemo(() => new Vector3(0.3, 2.1, 4), []);
+  const glowPosition = useMemo(
+    () => new Vector3(0.3, 2.04, HORIZON_Z),
+    [],
+  );
 
   useEffect(
     () => () => {
@@ -403,10 +409,12 @@ export default function OceanWorld({
       progress,
       JOURNEY_CHAPTERS[4],
     );
-    const presence = chapterPresence * MathUtils.smoothstep(progress, 0.76, 0.9);
-    const advance = MathUtils.smoothstep(progress, 0.75, 0.95);
-    const glowPresence =
-      chapterPresence * MathUtils.smoothstep(progress, 0.8, 0.92);
+    const presence = Math.max(
+      chapterPresence,
+      MathUtils.smoothstep(progress, 0.72, 0.88),
+    );
+    const advance = MathUtils.smoothstep(progress, 0.7, 0.88);
+    const glowPresence = MathUtils.smoothstep(progress, 0.76, 0.9);
     const mix = dampThemeMix(themeMix, theme, reducedMotion, delta);
     const time = reducedMotion ? 0 : clock.elapsedTime;
 
@@ -446,7 +454,11 @@ export default function OceanWorld({
     const surfaceUniforms = surfaceMaterial.uniforms;
     surfaceUniforms.uTime.value = time;
     surfaceUniforms.uTheme.value = mix;
-    surfaceUniforms.uPresence.value = presence;
+    surfaceUniforms.uPresence.value = MathUtils.lerp(
+      presence,
+      Math.sqrt(presence),
+      mix,
+    );
     surfaceUniforms.uAdvance.value = advance;
     surfaceUniforms.uMotionScale.value = reducedMotion ? 0.15 : 1;
     (surfaceUniforms.uPointerSea.value as Vector4).set(
@@ -487,7 +499,7 @@ export default function OceanWorld({
       <mesh
         geometry={surfaceGeometry}
         material={surfaceMaterial}
-        position={[0, -0.64, -16]}
+        position={[0, SEA_LEVEL, OCEAN_CENTER_Z]}
         rotation={[-Math.PI / 2, 0, 0]}
         frustumCulled={false}
         renderOrder={7}
@@ -496,7 +508,7 @@ export default function OceanWorld({
         geometry={glowGeometry}
         material={glowMaterial}
         position={glowPosition}
-        rotation={[0, Math.PI, 0]}
+        rotation={[0, 0, 0]}
         frustumCulled={false}
         renderOrder={8}
       />
